@@ -1,0 +1,8 @@
+
+/ImageProcessingLib/x64
+/ImageProcessingLib/ImageProcessingLib/x64
+/ImageProcessingLib/ImageProcessingLib/Debug
+/ImageProcessingLib/.vs/ImageProcessingLib/v16
+*.vcxproj
+*.filters
+*.user
