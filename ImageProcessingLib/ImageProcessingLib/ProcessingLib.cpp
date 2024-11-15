@@ -110,7 +110,7 @@ cl_device_id* ipGetArrDevices(cl_platform_id platform, cl_device_info device_typ
 			}
 			else subCount = ipGetCountDevices(subPlatform, subDevType);
 		}
-		else if (device_type == NULL) 
+		else if (device_type == NULL)
 		{
 			// Если не был передан тип устройств, то идёт перерасчёт всех доступных устройств всех доступных типов для изначально выбранной платформой
 			subDevType = CL_DEVICE_TYPE_ALL;
@@ -256,7 +256,7 @@ cl_int ipBuildProgram(cl_program prg, cl_device_id* devs)
 		char* log;
 		clGetProgramBuildInfo(prg, devs[i], CL_PROGRAM_BUILD_LOG, 0, NULL, &log_size);
 		log = (char*)malloc(log_size);
-		clGetProgramBuildInfo(prg, devs[i], CL_PROGRAM_BUILD_LOG, log_size, log, NULL); 
+		clGetProgramBuildInfo(prg, devs[i], CL_PROGRAM_BUILD_LOG, log_size, log, NULL);
 		printf("Device: ");
 		ipGetInfoAboutSelectedDevice(devs[i], CL_DEVICE_NAME, dev_size, "Name");
 		printf("\n  > Program Build Log: %s\n", log);
