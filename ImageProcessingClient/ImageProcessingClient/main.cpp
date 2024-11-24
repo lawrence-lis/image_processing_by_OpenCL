@@ -2,9 +2,14 @@
 // Если начнёт выёбываться на определение функций, то сотри и заново вставь следующую строку
 #include "ProcessingLib.h"
 #include "CL/cl.h"
+#include "Testing.h"
 
 int main(void)
 {
+	printf("Testing:\t---***---\n");
+	OpenCLTest_I1_Counting_Available_Platforms();
+	printf("End testing:\t---***---\n\n");
+
 	ipGetInfoAboutAvailableDevices();
 
 	cl_device_id device = ipGetDeviceByIndex(NULL, 0, 0);
