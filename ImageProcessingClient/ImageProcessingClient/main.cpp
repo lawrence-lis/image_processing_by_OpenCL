@@ -3,6 +3,9 @@
 #include "ProcessingLib.h"
 #include "CL/cl.h"
 #include "Testing.h"
+#include <opencv2/opencv.hpp>
+
+using namespace cv;
 
 int main(void)
 {
@@ -38,4 +41,16 @@ int main(void)
 	clReleaseCommandQueue(queue1);
 	clReleaseContext(context1);
 	clReleaseContext(context2);
+
+	// Чтение изображения из файла
+	Mat image = imread("cat-animal-art.jpg");
+	// Проверка на успешность чтения
+	if (image.empty()) {
+		printf("Unable to read image\n");
+		return -1;
+	}
+	// Отображение изображения
+	namedWindow("Image", WINDOW_NORMAL);
+	imshow("Image", image);
+	waitKey(0);
 }
