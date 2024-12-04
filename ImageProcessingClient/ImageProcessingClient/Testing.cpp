@@ -22,42 +22,45 @@ void Checking_clGetPlatformIds(cl_uint num_entries, cl_platform_id* platforms, c
 	}
 }
 
-cl_platform_id* Checking_ipGetArrPlatforms(cl_uint count)
+cl_platform_id* Checking_ipGetArrPlatforms(cl_int count, bool recounting = false)
 {
 	// Ввожу эту функцию для того, чтобы обработать передачу значений входных параметров не больше нуля и привести соответствующую функцию библиотеки к рабочему варианту, 
 	// если текущий вариант не работает
-	cl_uint subCount = count;
+	cl_int subCount = count;
 	cl_platform_id* res;
-	if (count <= 0) subCount = ipGetCountPlatforms();
+	if (recounting)
+		if (count <= 0) 
+			subCount = ipGetCountPlatforms();
 	switch (subCount) {
+		// Я заменю часть исходной функции. В оригинале функция прерывает работу программы, а здесь, только для тестов, пусть функция возвращает нулевой указатель и выводит код ошибки.
 	case -101:
-		printf("Error counting available platforms.\n  > [problem area: the \"ipGetArrPlatforms\" function]\n");
-		exit(-1011);
+		printf("Error counting available platforms.\n  > [problem area: the \"ipGetArrPlatforms\" function]\n\tError code: -1011\n");
+		return NULL;
 	case -102:
-		printf("Error in calculating the number of available platforms: host.\n  > [problem area: the \"ipGetArrPlatforms\" function]\n");
-		exit(-1021);
+		printf("Error in calculating the number of available platforms: host.\n  > [problem area: the \"ipGetArrPlatforms\" function]\n\tError code: -1021\n");
+		return NULL;
 	case -103:
-		printf("Error in calculating the number of available platforms: unknown.\n  > [problem area: the \"ipGetArrPlatforms\" function]\n");
-		exit(-1031);
+		printf("Error in calculating the number of available platforms: unknown.\n  > [problem area: the \"ipGetArrPlatforms\" function]\n\tError code: -1031\n");
+		return NULL;
 	default:
 		printf("calculating/getting successfull\n");
 		break;
 	}
 	res = new cl_platform_id[subCount];
 	cl_uint status = clGetPlatformIDs(subCount, res, NULL);
-	/*switch (status) {
+	switch (status) {
 	case CL_SUCCESS:
 		return res;
 	case CL_INVALID_VALUE:
-		printf("Error in the execution of the clGetPlatformIDs function\n  > [problem area: the \"ipGetArrPlatforms\" function]\n");
-		exit(-1012);
+		printf("Error in the execution of the clGetPlatformIDs function\n  > [problem area: the \"ipGetArrPlatforms\" function]\n\tError code: -1012\n"); 
+		return NULL;
 	case CL_OUT_OF_HOST_MEMORY:
-		printf("Error allocating resources needed to implement OpenCL on the host\n  > [problem area: the \"ipGetArrPlatforms\" function]\n");
-		exit(-1022);
+		printf("Error allocating resources needed to implement OpenCL on the host\n  > [problem area: the \"ipGetArrPlatforms\" function]\n\tError code: -1022\n");
+		return NULL;
 	default:
-		printf("Unknown error\n  > [problem area: the \"ipGetArrPlatforms\" function]\n");
-		exit(-1032);
-	}*/
+		printf("Unknown error\n  > [problem area: the \"ipGetArrPlatforms\" function]\n\tError code: -1032\n");
+		return NULL;
+	}
 }
 
 void OpenCLTest_I1_Counting_Available_Platforms()
@@ -80,5 +83,29 @@ void OpenCLTest_I1_Counting_Available_Platforms()
 
 	/*-------------------------*/
 	// Тесты функции ipGetArrPlatforms
-
+	printf("\n************\nTesting ipGetArrPlatforms function:\n");
+	cl_platform_id* p1;
+	/* ---1--- */
+	p1 = Checking_ipGetArrPlatforms(-101);
+	/* ---2--- */
+	p1 = Checking_ipGetArrPlatforms(-102);
+	/* ---3--- */
+	p1 = Checking_ipGetArrPlatforms(-103);
+	/* ---4--- */
+	p1 = Checking_ipGetArrPlatforms(0);
+	/* ---5--- */
+	p1 = Checking_ipGetArrPlatforms(1);
+	// Включить переподсчёт доступных платформ
+	printf("Recounting on:\n");
+	/* ---6--- */
+	p1 = Checking_ipGetArrPlatforms(-101, true);
+	/* ---7--- */
+	p1 = Checking_ipGetArrPlatforms(-102, true);
+	/* ---8--- */
+	p1 = Checking_ipGetArrPlatforms(-103, true);
+	/* ---9--- */
+	p1 = Checking_ipGetArrPlatforms(0, true);
+	/* ---10--- */
+	p1 = Checking_ipGetArrPlatforms(1, true);
+	delete[] p1;
 }
