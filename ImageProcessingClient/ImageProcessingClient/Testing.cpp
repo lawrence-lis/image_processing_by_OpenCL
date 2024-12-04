@@ -1,32 +1,68 @@
 #include "CL/cl.h"
 #include "Testing.h"
 #include "ProcessingLib.h"
+#include <cstdlib>
 
 void Checking_clGetPlatformIds(cl_uint num_entries, cl_platform_id* platforms, cl_uint* num_platforms)
 {
 	switch (clGetPlatformIDs(num_entries, platforms, num_platforms))
 	{
-	case CL_SUCCESS: { 
+	case CL_SUCCESS:
 		printf("Available platforms: %d\n", *num_platforms);
-		return; 
-	}
-	case CL_INVALID_VALUE: { 
+		return;
+	case CL_INVALID_VALUE:
 		printf("Error counting available platforms.\n"); 
 		return;
-	}
-	case CL_OUT_OF_HOST_MEMORY: {
+	case CL_OUT_OF_HOST_MEMORY:
 		printf("Error: Unable to allocate resources required by the OpenCL implementation on the host.\n");
 		return;
-	}
-	default: {
+	default:
 		printf("WARNING: unknown error when calculating the number of available platforms\n");
 		return;
 	}
+}
+
+cl_platform_id* Checking_ipGetArrPlatforms(cl_uint count)
+{
+	// Ввожу эту функцию для того, чтобы обработать передачу значений входных параметров не больше нуля и привести соответствующую функцию библиотеки к рабочему варианту, 
+	// если текущий вариант не работает
+	cl_uint subCount = count;
+	cl_platform_id* res;
+	if (count <= 0) subCount = ipGetCountPlatforms();
+	switch (subCount) {
+	case -101:
+		printf("Error counting available platforms.\n  > [problem area: the \"ipGetArrPlatforms\" function]\n");
+		exit(-1011);
+	case -102:
+		printf("Error in calculating the number of available platforms: host.\n  > [problem area: the \"ipGetArrPlatforms\" function]\n");
+		exit(-1021);
+	case -103:
+		printf("Error in calculating the number of available platforms: unknown.\n  > [problem area: the \"ipGetArrPlatforms\" function]\n");
+		exit(-1031);
+	default:
+		printf("calculating/getting successfull\n");
+		break;
 	}
+	res = new cl_platform_id[subCount];
+	cl_uint status = clGetPlatformIDs(subCount, res, NULL);
+	/*switch (status) {
+	case CL_SUCCESS:
+		return res;
+	case CL_INVALID_VALUE:
+		printf("Error in the execution of the clGetPlatformIDs function\n  > [problem area: the \"ipGetArrPlatforms\" function]\n");
+		exit(-1012);
+	case CL_OUT_OF_HOST_MEMORY:
+		printf("Error allocating resources needed to implement OpenCL on the host\n  > [problem area: the \"ipGetArrPlatforms\" function]\n");
+		exit(-1022);
+	default:
+		printf("Unknown error\n  > [problem area: the \"ipGetArrPlatforms\" function]\n");
+		exit(-1032);
+	}*/
 }
 
 void OpenCLTest_I1_Counting_Available_Platforms()
 {
+	// Тест функции ipGetCountPlatforms
 	printf("Available platforms: %d\n", ipGetCountPlatforms());
 	// Дальше тесты функции clGetPlatformIDs
 	cl_uint res;
@@ -41,4 +77,8 @@ void OpenCLTest_I1_Counting_Available_Platforms()
 	/* ---3--- */
 	// 2-й исключённый случай, передаём num_entries = NULL и cl_platform_id = NULL. По спецификации функция вернёт CL_INVALID_VALUE.
 	Checking_clGetPlatformIds(0, NULL, NULL);
+
+	/*-------------------------*/
+	// Тесты функции ipGetArrPlatforms
+
 }

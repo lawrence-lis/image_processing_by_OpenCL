@@ -11,7 +11,7 @@ int main(void)
 {
 	printf("Testing:\t---***---\n");
 	OpenCLTest_I1_Counting_Available_Platforms();
-	printf("End testing:\t---***---\n\n");
+	printf("\nEnd testing:\t---***---\n\n");
 
 	ipGetInfoAboutAvailableDevices();
 

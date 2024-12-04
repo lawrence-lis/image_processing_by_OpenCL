@@ -19,32 +19,74 @@ cl_uint ipGetCountPlatforms()
 		// ненулевой указатель. Вывести сообщение о неправильности передаваемых параметров и вернуть код ошибки, который, возможно, будет внесён и классифицирован намного позже. По идее, от пользователя
 		// тут ничего не зависит, и если выпадает имеено эта ветка, то либо происходит тестирование, либо что-то не так с компьютером пользователя, либо разработчик что-то напутал и не тестировал то, 
 		// что разработал.
-		printf("Error counting available platforms.\n");
+		printf("Error counting available platforms.\n  > [problem area: the \"ipGetCountPlatforms\" function]\n");
 		return -101;
 	case CL_OUT_OF_HOST_MEMORY:
 		// Ошибка: Не удается выделить на хосте ресурсы, необходимые для реализации OpenCL. Вывести соответствующее сообщение и вернуть код ошибки, который, возможно, будет внесён и классифицирован 
 		// намного позже. По идее, эта ошибка может вылезти только из-за неисправности самого хоста.
-		printf("Error: Unable to allocate resources required by the OpenCL implementation on the host.\n");
+		printf("Error: Unable to allocate resources required by the OpenCL implementation on the host.\n  > [problem area: the \"ipGetCountPlatforms\" function]\n");
 		return -102;
 	default:
 		// Ничто из вышеперечисленного, вывестина экран сообщение о неизвестной ошибке и вернуть код ошибки, который, возможно, будет внесён и классифицирован намного позже
-		printf("WARNING: unknown error when calculating the number of available platforms\n");
+		printf("WARNING: unknown error when calculating the number of available platforms\n  > [problem area: the \"ipGetCountPlatforms\" function]\n");
 		return -103;
 	}
 }
 
 cl_platform_id* ipGetArrPlatforms(cl_uint count)
 {
+	// Функция для получения массива доступных платформ
 	cl_uint subCount = count;		// Ввёл для обработки случая с нулём в качестве аргумента функции
 	cl_platform_id* res;
-	if (count == 0)
-	{
-		subCount = ipGetCountPlatforms();
-		res = new cl_platform_id[subCount];
+	// Я хочу, чтобы в случае когда пользователь в качестве аргумента функции передал значение не больше нуля, то происходил перерасчёт доступных платформ
+	if (count <= 0) subCount = ipGetCountPlatforms();
+	// Проверка переданного/пересчитанного значения количества доступных платформ
+	switch (subCount) {
+	case -101:
+		// По идее, должно сработать если в качестве аргумента функции пользователь передал конкретное значение -101 и по каким-то причинам оно успешно прошло вышестоящую проверку (чего явно не должно
+		// быть, но я устал и исправлять это не буду). Либо же в процессе перерасчёта произошло что-то непредвиденное и в качестве значения количества доступных платформ вернулся код ошибки -101.
+		// Связано это может быть с ошибкой при выполнении самой функции (чисто моё мнение, маловероятно). В любом случае надо вывести соответствующее сообщение об ошибке, прервать выполнение функции с
+		// возвращением соответствующего кода ошибки.
+		printf("Error counting available platforms.\n  > [problem area: the \"ipGetArrPlatforms\" function]\n");
+		exit(-1011);
+	case -102:
+		// По идее, должно сработать если в качестве аргумента функции пользователь передал конкретное значение -102 и по каким-то причинам оно успешно прошло вышестоящую проверку. Либо же в процессе 
+		// перерасчёта произошло что-то непредвиденное и в качестве значения количества доступных платформ вернулся код ошибки -102. Связано это может быть с проблемой работы хоста (чисто моё мнение).
+		// В любом случае надо вывести соответствующее сообщение об ошибке, прервать выполнение функции с возвращением соответствующего кода ошибки.
+		printf("Error in calculating the number of available platforms: host.\n  > [problem area: the \"ipGetArrPlatforms\" function]\n");
+		exit(-1021);
+	case -103:
+		// По идее, должно сработать если в качестве аргумента функции пользователь передал конкретное значение -103 и по каким-то причинам оно успешно прошло вышестоящую проверку. Либо же в процессе 
+		// перерасчёта произошло что-то непредвиденное и в качестве значения количества доступных платформ вернулся код ошибки -103. Не имею ни малейшего понятия, почему это произошло. В любом случае
+		// надо вывести соответствующее сообщение об ошибке, прервать выполнение функции с возвращением соответствующего кода ошибки.
+		printf("Error in calculating the number of available platforms: unknown.\n  > [problem area: the \"ipGetArrPlatforms\" function]\n");
+		exit(-1031);
+	default:
+		// Передача значения количества доступных платформ произошла без ошибок, либо же их перерасчёт прошёл успешно. Ничего не выводить, просто продолжить работу функции.
+		break;
 	}
-	else res = new cl_platform_id[subCount];
+	res = new cl_platform_id[subCount];
 	cl_uint status = clGetPlatformIDs(subCount, res, NULL);
-	return res;
+	switch (status) {
+	case CL_SUCCESS:
+		// Выделение массива произошло успешно, ничего выводить не нужно, просто вернуть массив.
+		return res;
+	case CL_INVALID_VALUE:
+		// Выпадает если в качестве последних двух параметров функции clGetPlatformIDs передали NULL, либо если в качестве количества доступных платформ передали 0, а в качестве платформ передали 
+		// ненулевой указатель. Короче говоря, ошибка в выполнении функции clGetPlatformIDs. Вывести соответствующее сообщение об ошибке, прервать выполнение функции и вернуть соответствующий код
+		// ошибки.
+		printf("Error in the execution of the clGetPlatformIDs function\n  > [problem area: the \"ipGetArrPlatforms\" function]\n");
+		exit(-1012);
+	case CL_OUT_OF_HOST_MEMORY:
+		// Выпадает если не удается выделить на хосте ресурсы, необходимые для реализации OpenCL. По идее, эта ошибка может вылезти только из-за неисправности самого хоста. Вывести соответствующее 
+		// сообщение и вернуть код ошибки.
+		printf("Error allocating resources needed to implement OpenCL on the host\n  > [problem area: the \"ipGetArrPlatforms\" function]\n");
+		exit(-1022);
+	default:
+		// Ничто из вышеперечисленного. Понятия не имею, что же произошло. В любом случае вывестина экран сообщение о неизвестной ошибке и вернуть код ошибки
+		printf("Unknown error\n  > [problem area: the \"ipGetArrPlatforms\" function]\n");
+		exit(-1032);
+	}
 }
 
 cl_platform_id ipGetPlatformByIndex(cl_platform_id* platforms, cl_uint count, int idx)
