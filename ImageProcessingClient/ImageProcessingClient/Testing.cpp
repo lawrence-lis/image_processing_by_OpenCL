@@ -3,6 +3,8 @@
 #include "ProcessingLib.h"
 #include <cstdlib>
 
+/////////////////////////////////// Функции, через которые я тестирую разные вещи //////////////////////////////////////////////////////
+
 void Checking_clGetPlatformIds(cl_uint num_entries, cl_platform_id* platforms, cl_uint* num_platforms)
 {
 	switch (clGetPlatformIDs(num_entries, platforms, num_platforms))
@@ -63,10 +65,29 @@ cl_platform_id* Checking_ipGetArrPlatforms(cl_int count, bool recounting = false
 	}
 }
 
+cl_platform_id Checking_ipGetPlatformByIndex(cl_platform_id* platforms, cl_uint count, int idx, bool EmptyArray = false)
+{
+	cl_platform_id res;
+	if (EmptyArray)
+	{
+		if (platforms == NULL)
+		{
+			cl_platform_id* subArrPlatforms = ipGetArrPlatforms(count);
+			res = subArrPlatforms[0];
+			delete[] subArrPlatforms;
+		}
+		else res = platforms[idx];
+	}
+	else res = platforms[idx];
+	return res;
+}
+
+////////////////////////////////////////////////// Дальше пойдут функции, через которые клиент вызывает тесты ////////////////////////////////////////////////////////////////
+
 void OpenCLTest_I1_Counting_Available_Platforms()
 {
-	// Тест функции ipGetCountPlatforms
-	printf("Available platforms: %d\n", ipGetCountPlatforms());
+	// Тесты функции ipGetCountPlatforms
+	printf("/// Testing of counting of available platforms ///\nAvailable platforms: %d\n", ipGetCountPlatforms());
 	// Дальше тесты функции clGetPlatformIDs
 	cl_uint res;
 	/* ---1--- */
@@ -80,10 +101,13 @@ void OpenCLTest_I1_Counting_Available_Platforms()
 	/* ---3--- */
 	// 2-й исключённый случай, передаём num_entries = NULL и cl_platform_id = NULL. По спецификации функция вернёт CL_INVALID_VALUE.
 	Checking_clGetPlatformIds(0, NULL, NULL);
+	printf("\n");
+}
 
-	/*-------------------------*/
+void OpenCLTest_I2_Getting_Available_Platforms_With_Recounting()
+{
 	// Тесты функции ipGetArrPlatforms
-	printf("\n************\nTesting ipGetArrPlatforms function:\n");
+	printf("/// Testing ipGetArrPlatforms function ///\n");
 	cl_platform_id* p1;
 	/* ---1--- */
 	p1 = Checking_ipGetArrPlatforms(-101);
@@ -96,7 +120,7 @@ void OpenCLTest_I1_Counting_Available_Platforms()
 	/* ---5--- */
 	p1 = Checking_ipGetArrPlatforms(1);
 	// Включить переподсчёт доступных платформ
-	printf("Recounting on:\n");
+	printf("//->Recounting on:\n");
 	/* ---6--- */
 	p1 = Checking_ipGetArrPlatforms(-101, true);
 	/* ---7--- */
@@ -108,4 +132,39 @@ void OpenCLTest_I1_Counting_Available_Platforms()
 	/* ---10--- */
 	p1 = Checking_ipGetArrPlatforms(1, true);
 	delete[] p1;
+	printf("\n");
+}
+
+void OpenCLTest_I3_Getting_Information_About_Available_Platforms()
+{
+	// Тесты функций ipGetPlatformByIndex и ipGetInfoAboutPlatform
+	printf("/// Testing ipGetPlatformByIndex and ipGetInfoAboutPlatform functions ///\n");
+	cl_platform_id* p = ipGetArrPlatforms(ipGetCountPlatforms());
+	size_t size;
+	// Тесты функции Checking_ipGetPlatformByIndex
+	cl_platform_id platform = Checking_ipGetPlatformByIndex(p, ipGetCountPlatforms(), 0);
+	// Тесты функции ipGetInfoAboutPlatform
+	/* ---1--- */
+	// Ожидаемый результата: успешное выполнение, вывод информации о профиле
+	ipGetInfoAboutPlatform(platform, CL_PLATFORM_PROFILE, size, "Profile");
+	/* ---2--- */
+	// Ожидаемый результата: неуспешное выполнение, вывод сообщения об ошибке в определении платформы.
+	ipGetInfoAboutPlatform(NULL, CL_PLATFORM_PROFILE, size, "Profile");
+	/* ---3--- */
+	// Ожидаемый результата: неуспешное выполнение, вывод сообщения об ошибке в определении типа выводимой информации.
+	ipGetInfoAboutPlatform(platform, 0x9999, size, "Profile");
+	/* ---4--- */
+	// Ожидаемый результата: успешное выполнение, вывод информации о версии
+	ipGetInfoAboutPlatform(platform, CL_PLATFORM_VERSION, size, "Version");
+	/* ---5--- */
+	// Ожидаемый результата: успешное выполнение, вывод информации об имени
+	ipGetInfoAboutPlatform(platform, CL_PLATFORM_NAME, size, "Name");
+	/* ---6--- */
+	// Ожидаемый результата: успешное выполнение, вывод информации о производителе
+	ipGetInfoAboutPlatform(platform, CL_PLATFORM_VENDOR, size, "Vendor");
+	/* ---7--- */
+	// Ожидаемый результата: успешное выполнение, вывод информации о расширениях
+	ipGetInfoAboutPlatform(platform, CL_PLATFORM_EXTENSIONS, size, "Extensions");
+	delete[] p;
+	printf("\n");
 }

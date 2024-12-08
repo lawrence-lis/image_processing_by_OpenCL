@@ -30,16 +30,16 @@ extern "C" PROCESSINGLIBRARY_API cl_platform_id * ipGetArrPlatforms(cl_uint coun
 	  * idx - индекс возвращаемой платформы (задаётся пользователем)*/
 extern "C" PROCESSINGLIBRARY_API cl_platform_id ipGetPlatformByIndex(cl_platform_id * platforms, cl_uint count, int idx);
 
-// Функция, отображающая информацио обо всех доступных платформах
-extern "C" PROCESSINGLIBRARY_API void ipGetInfoAboutAvailablePlatforms();
-
-/* Функция, отображающая информацию обо всех доступных платформах
+/* Функция, отображающая информацию о выбранной платформе
 	Параметры:
 	 * platform - идентификатор платформы, информацию о которой надо отобразить
 	 * info_type - тип отображаемой информации
 	 * p_s - адрес переменной размера отображаемой информации
 	 * title - строка, поясняющая, что это за информация, которую выводит данна функция*/
-extern "C" PROCESSINGLIBRARY_API void ipGetInfoAboutPlatform(cl_platform_id platform, cl_platform_info info_type, size_t & p_s, char* title);
+extern "C" PROCESSINGLIBRARY_API void ipGetInfoAboutPlatform(cl_platform_id platform, cl_platform_info info_type, size_t & p_s, const char* title);
+
+// Функция, отображающая информацио обо всех доступных платформах
+extern "C" PROCESSINGLIBRARY_API void ipGetInfoAboutAvailablePlatforms();
 
 ///////////////////////////////////////////// Устройства /////////////////////////////////////////////
 
@@ -145,6 +145,7 @@ extern "C" PROCESSINGLIBRARY_API cl_int ipSetKernelParam(cl_kernel krn, cl_uint 
 extern "C" PROCESSINGLIBRARY_API cl_int ipWorkKernel(cl_kernel krn, cl_command_queue que, cl_uint dim, const size_t * gws);
 
 // ВАЖНО 1: ВНЕДРИ ОБРАБОТКУ ОШИБОК
+// ВАЖНО 2: ПОДУМАЙ НАД ФУНКЦИЕЙ ipGetPlatformByIndex, УЧТИ НЕКОРРЕКТНЫЙ ВВОД ИНДЕКСОВ
 // ВАЖНО 2: ПОДУМАЙ, ЧТО БУДЕТ ДОСТУПНО ПОЛЬЗОВАТЕЛЮ, А ЧТО - НЕТ
 // ВАЖНО 3: ПОДУМАЙ, НУЖНО ЛИ УКАЗЫВАТЬ КОЛИЧЕСТВО В ПАРАМЕТРАХ ФУНКЦИИ?
 // ВАЖНО 4: ВНЕДРИ ВЫВОД ИНФОРМАЦИИ О ТОМ, КАКАЯ ИМЕЕНО ВЕТКА ВЕТВИСТЫХ АЛГОРИТМОВ БЫЛА ЗАДЕЙСТВОВАНА
