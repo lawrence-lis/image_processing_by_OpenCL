@@ -3,7 +3,7 @@
 #include "ProcessingLib.h"
 #include "CL/cl.h"
 #include "Testing.h"
-#include <opencv2/opencv.hpp>
+#include <opencv2/highgui/highgui.hpp>
 
 using namespace cv;
 
@@ -50,7 +50,8 @@ int main(void)
 		return -1;
 	}
 	// Отображение изображения
-	namedWindow("Image", WINDOW_NORMAL);
+	namedWindow("Image", WINDOW_AUTOSIZE);
 	imshow("Image", image);
 	waitKey(0);
+	destroyWindow("Image");
 }
