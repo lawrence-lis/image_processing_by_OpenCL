@@ -4,6 +4,7 @@
 #include "CL/cl.h"
 #include "Testing.h"
 #include <opencv2/highgui/highgui.hpp>
+#include <opencv2/imgproc/imgproc.hpp>
 
 using namespace cv;
 
@@ -42,16 +43,24 @@ int main(void)
 	clReleaseContext(context1);
 	clReleaseContext(context2);
 
-	// Чтение изображения из файла
-	Mat image = imread("cat-animal-art.jpg");
-	// Проверка на успешность чтения
-	if (image.empty()) {
-		printf("Unable to read image\n");
-		return -1;
+	// Отображение видео
+	namedWindow("Video", 0);
+	// Создаём объект захвата видео. Этот объект умеет открывать и закрывать видеофайлы любых типов, поддерживаемых библиотекой ffmpeg
+	VideoCapture cap;
+	// Объекту захвата передаётся строка, содержащая полный путь к видеофайлу
+	cap.open("Sber.VideoForTesting_1.mp4");
+	// После открытия файла объект содержать всю информацию о считываемом видео, включая и информацию о состоянии
+	// При таком создании объект захвата инициализируетсяпервым кадром видео
+	// Далее создаём объект изображения, в котором будут храниться кадры видео
+	Mat frame;
+	for (;;)
+	{
+		//Внутри цикла for из видеофайла последовательно читаются кадры с помощью потокового объекта захвата
+		cap >> frame;
+		if (frame.empty()) break;
+		imshow("Video", frame);
+		// После отображения кадра мы ждем 33 мс. Если за это время пользователь нажмет какую - нибудь клавишу, то мы выходим из цикла чтения. В противном случае по прошествии 33 мс мы переходим к следующей итерации.После 
+		// выхода из цикла вся выделенная память автоматически освобождается.
+		if (waitKey(33) >= 0) break;
 	}
-	// Отображение изображения
-	namedWindow("Image", WINDOW_AUTOSIZE);
-	imshow("Image", image);
-	waitKey(0);
-	destroyWindow("Image");
 }
