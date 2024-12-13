@@ -5,8 +5,22 @@
 #include "Testing.h"
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
+#include <fstream>
 
 using namespace cv;
+using namespace std;
+
+int g_slider_position = 0;
+int g_run = 1, g_dontset = 0; // начинаем в режиме покадрового просмотра
+cv::VideoCapture g_cap;
+
+void onTrackbarSlide(int pos, void*)
+{
+	g_cap.set(cv::CAP_PROP_POS_FRAMES, pos);
+	if (!g_dontset)
+		g_run = 1;
+	g_dontset = 0;
+}
 
 int main(void)
 {
@@ -45,22 +59,38 @@ int main(void)
 
 	// Отображение видео
 	namedWindow("Video", 0);
-	// Создаём объект захвата видео. Этот объект умеет открывать и закрывать видеофайлы любых типов, поддерживаемых библиотекой ffmpeg
-	VideoCapture cap;
-	// Объекту захвата передаётся строка, содержащая полный путь к видеофайлу
-	cap.open("Sber.VideoForTesting_1.mp4");
-	// После открытия файла объект содержать всю информацию о считываемом видео, включая и информацию о состоянии
-	// При таком создании объект захвата инициализируетсяпервым кадром видео
-	// Далее создаём объект изображения, в котором будут храниться кадры видео
-	Mat frame;
+	g_cap.open("Sber.VideoForTesting_1.mp4");
+	int frames = (int)g_cap.get(CAP_PROP_FRAME_COUNT);
+	int tmtw = (int)g_cap.get(CAP_PROP_FRAME_WIDTH);
+	int tmth = (int)g_cap.get(CAP_PROP_FRAME_HEIGHT);
+	printf("Frame count: %d, size: [%d x %d]\n", frames, tmtw, tmth);
+	cv::createTrackbar("Position", "Video", &g_slider_position, frames, onTrackbarSlide);
+	cv::Mat frame;
 	for (;;)
 	{
-		//Внутри цикла for из видеофайла последовательно читаются кадры с помощью потокового объекта захвата
-		cap >> frame;
-		if (frame.empty()) break;
-		imshow("Video", frame);
-		// После отображения кадра мы ждем 33 мс. Если за это время пользователь нажмет какую - нибудь клавишу, то мы выходим из цикла чтения. В противном случае по прошествии 33 мс мы переходим к следующей итерации.После 
-		// выхода из цикла вся выделенная память автоматически освобождается.
-		if (waitKey(33) >= 0) break;
+		if (g_run != 0)
+		{
+			g_cap >> frame;
+			if (frame.empty()) 
+				break;
+			int current_pos = (int)g_cap.get(CAP_PROP_POS_FRAMES);
+			g_dontset = 1;
+			cv::setTrackbarPos("Position", "Video", current_pos);
+			imshow("Video", frame);
+			g_run -= 1;
+		}
+		char c = (char)cv::waitKey(10);
+		if (c == 's') // покадровый режим
+		{
+			g_run = 1;
+			printf("Frame-by-frame mode, run = %d\n", g_run);
+		}
+		if (c == 'r') // непрерывный режим
+		{
+			g_run = -1;
+			printf("Continuous mode, run = %d\n", g_run);
+		}
+		if (c == 27)
+			break;
 	}
 }
