@@ -3,24 +3,7 @@
 #include "ProcessingLib.h"
 #include "CL/cl.h"
 #include "Testing.h"
-#include <opencv2/highgui/highgui.hpp>
-#include <opencv2/imgproc/imgproc.hpp>
-#include <fstream>
-
-using namespace cv;
-using namespace std;
-
-int g_slider_position = 0;
-int g_run = 1, g_dontset = 0; // начинаем в режиме покадрового просмотра
-cv::VideoCapture g_cap;
-
-void onTrackbarSlide(int pos, void*)
-{
-	g_cap.set(cv::CAP_PROP_POS_FRAMES, pos);
-	if (!g_dontset)
-		g_run = 1;
-	g_dontset = 0;
-}
+#include <opencv2/opencv.hpp>
 
 int main(void)
 {
@@ -57,40 +40,20 @@ int main(void)
 	clReleaseContext(context1);
 	clReleaseContext(context2);
 
-	// Отображение видео
-	namedWindow("Video", 0);
-	g_cap.open("Sber.VideoForTesting_1.mp4");
-	int frames = (int)g_cap.get(CAP_PROP_FRAME_COUNT);
-	int tmtw = (int)g_cap.get(CAP_PROP_FRAME_WIDTH);
-	int tmth = (int)g_cap.get(CAP_PROP_FRAME_HEIGHT);
-	printf("Frame count: %d, size: [%d x %d]\n", frames, tmtw, tmth);
-	cv::createTrackbar("Position", "Video", &g_slider_position, frames, onTrackbarSlide);
-	cv::Mat frame;
-	for (;;)
-	{
-		if (g_run != 0)
-		{
-			g_cap >> frame;
-			if (frame.empty()) 
-				break;
-			int current_pos = (int)g_cap.get(CAP_PROP_POS_FRAMES);
-			g_dontset = 1;
-			cv::setTrackbarPos("Position", "Video", current_pos);
-			imshow("Video", frame);
-			g_run -= 1;
-		}
-		char c = (char)cv::waitKey(10);
-		if (c == 's') // покадровый режим
-		{
-			g_run = 1;
-			printf("Frame-by-frame mode, run = %d\n", g_run);
-		}
-		if (c == 'r') // непрерывный режим
-		{
-			g_run = -1;
-			printf("Continuous mode, run = %d\n", g_run);
-		}
-		if (c == 27)
-			break;
-	}
+	// Загрузить изображение.
+	cv::Mat image = cv::imread("cat-animal-art.jpg");
+	// Создаём несколько окон для показа входного и выходного изображений.
+	cv::namedWindow("Example_in", cv::WINDOW_AUTOSIZE);
+	cv::namedWindow("Example_out", cv::WINDOW_AUTOSIZE);
+	// Показываем входное изображение.
+	cv::imshow("Example_in", image);
+	// Создаём объект для хранения сглаженного изображения
+	cv::Mat out;
+	// Сглаживаем (можно использовать GaussianBlur(), blur(), medianBlur() или bilateralFilter())
+	cv::GaussianBlur(image, out, cv::Size(5, 5), 3, 3);
+	cv::GaussianBlur(out, out, cv::Size(5, 5), 3, 3);
+	// Показываем сглаженное изображение в окне вывода
+	cv::imshow("Example_out", out);
+	// Ждём нажатия клавиши, окна уничтожаются автоматически
+	cv::waitKey(0);
 }
