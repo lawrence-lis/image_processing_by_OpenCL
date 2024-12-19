@@ -40,20 +40,12 @@ int main(void)
 	clReleaseContext(context1);
 	clReleaseContext(context2);
 
-	// Загрузить изображение.
-	cv::Mat image = cv::imread("cat-animal-art.jpg");
-	// Создаём несколько окон для показа входного и выходного изображений.
-	cv::namedWindow("Example_in", cv::WINDOW_AUTOSIZE);
-	cv::namedWindow("Example_out", cv::WINDOW_AUTOSIZE);
-	// Показываем входное изображение.
-	cv::imshow("Example_in", image);
-	// Создаём объект для хранения сглаженного изображения
-	cv::Mat out;
-	// Сглаживаем (можно использовать GaussianBlur(), blur(), medianBlur() или bilateralFilter())
-	cv::GaussianBlur(image, out, cv::Size(5, 5), 3, 3);
-	cv::GaussianBlur(out, out, cv::Size(5, 5), 3, 3);
-	// Показываем сглаженное изображение в окне вывода
-	cv::imshow("Example_out", out);
-	// Ждём нажатия клавиши, окна уничтожаются автоматически
+	cv::Mat img1, img2;
+	cv::namedWindow("Image-in", 0);
+	cv::namedWindow("Image-out", 0);
+	img1 = cv::imread("cat-animal-art.jpg");
+	cv::imshow("Image-in", img1);
+	cv::pyrDown(img1, img2);
+	cv::imshow("Image-out", img2);
 	cv::waitKey(0);
 }
