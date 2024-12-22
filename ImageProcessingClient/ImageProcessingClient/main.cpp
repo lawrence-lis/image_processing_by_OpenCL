@@ -40,12 +40,5 @@ int main(void)
 	clReleaseContext(context1);
 	clReleaseContext(context2);
 
-	cv::Mat img1, img2;
-	cv::namedWindow("Image-in", 0);
-	cv::namedWindow("Image-out", 0);
-	img1 = cv::imread("cat-animal-art.jpg");
-	cv::imshow("Image-in", img1);
-	cv::pyrDown(img1, img2);
-	cv::imshow("Image-out", img2);
-	cv::waitKey(0);
+
 }
