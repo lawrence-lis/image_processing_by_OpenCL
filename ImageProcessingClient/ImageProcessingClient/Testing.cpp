@@ -82,6 +82,37 @@ cl_platform_id Checking_ipGetPlatformByIndex(cl_platform_id* platforms, cl_uint 
 	return res;
 }
 
+void Checking_ipGetInfoAboutAvailablePlatforms(cl_uint count_platforms = ipGetCountPlatforms())
+{
+	switch (count_platforms) {
+	case -101:
+		printf("Error counting available platforms.\n  > [problem area: the \"ipGetInfoAboutAvailablePlatforms\" function]\n");
+		return;
+	case -102:
+		printf("Error in calculating the number of available platforms: host.\n  > [problem area: the \"ipGetInfoAboutAvailablePlatforms\" function]\n");
+		return;
+	case -103:
+		printf("Error in calculating the number of available platforms: unknown.\n  > [problem area: the \"ipGetInfoAboutAvailablePlatforms\" function]\n");
+		return;
+	default:
+		printf("Number of available platforms: %d\n\n", count_platforms);
+		break;
+	}
+	cl_platform_id* platforms = ipGetArrPlatforms(count_platforms);
+	size_t size;
+	for (cl_uint i = 0; i < count_platforms; i++)
+	{
+		printf("Platform[%d]:\n", i);
+		ipGetInfoAboutPlatform(platforms[i], CL_PLATFORM_NAME, size, "Name");
+		ipGetInfoAboutPlatform(platforms[i], CL_PLATFORM_VERSION, size, "Version");
+		ipGetInfoAboutPlatform(platforms[i], CL_PLATFORM_PROFILE, size, "Profile");
+		ipGetInfoAboutPlatform(platforms[i], CL_PLATFORM_EXTENSIONS, size, "Extensions");
+		printf("\n");
+	}
+	printf("\n");
+	delete[] platforms;
+}
+
 ////////////////////////////////////////////////// Дальше пойдут функции, через которые клиент вызывает тесты ////////////////////////////////////////////////////////////////
 
 void OpenCLTest_I1_Counting_Available_Platforms()
@@ -167,4 +198,22 @@ void OpenCLTest_I3_Getting_Information_About_Available_Platforms()
 	ipGetInfoAboutPlatform(platform, CL_PLATFORM_EXTENSIONS, size, "Extensions");
 	delete[] p;
 	printf("\n");
+}
+
+void OpenCLTest_I4_Getting_Informations_About_All_Available_Platforms()
+{
+	printf("/// Testing ipGetInfoAboutAvailablePlatforms function ///\n");
+	// Тест 1-й. Простой вызов функции из библиотеки. Ожидаемый результат: успешное выполнение библиотечной функции и вывод на экран полученной информации.
+	ipGetInfoAboutAvailablePlatforms();
+	// Тест 2-й. Простой вызов переписанной функции тестирования. Ожидаемый результат: успешное выполнение тестировочной функции и вывод на экран полученной информации.
+	Checking_ipGetInfoAboutAvailablePlatforms();
+	// Тест 3-й. Вызов переписанной функции тестирования с параметром, отвечающим за возвращаемое значение расчётной функции доступных платформ, равным -101. Ожидаемый результат: успешное выполнение 
+	// тестировочной функции и вывод на экран сообщения об ошибке.
+	Checking_ipGetInfoAboutAvailablePlatforms(-101);
+	// Тест 4-й. Вызов переписанной функции тестирования с параметром, отвечающим за возвращаемое значение расчётной функции доступных платформ, равным -102. Ожидаемый результат: успешное выполнение 
+	// тестировочной функции и вывод на экран сообщения об ошибке.
+	Checking_ipGetInfoAboutAvailablePlatforms(-102);
+	// Тест 5-й. Вызов переписанной функции тестирования с параметром, отвечающим за возвращаемое значение расчётной функции доступных платформ, равным -103. Ожидаемый результат: успешное выполнение 
+	// тестировочной функции и вывод на экран сообщения об ошибке.
+	Checking_ipGetInfoAboutAvailablePlatforms(-103);
 }

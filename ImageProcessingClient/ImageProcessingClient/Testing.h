@@ -13,3 +13,6 @@ void OpenCLTest_I2_Getting_Available_Platforms_With_Recounting();
 функции получения конкретной платформы из массива доступных (Да, обложаться тут сложно, но учитывая, сколько раз я это переделывал, и сколько ещё предстоит переделать в соответствии со всеми моими 
 хотелками...) с учётом проверки на отсутствие переданных доступных платформ*/
 void OpenCLTest_I3_Getting_Information_About_Available_Platforms();
+
+/*Функция для проверки работоспособности функции ipGetInfoAboutAvailablePlatforms, получающей и выводящую информацию об имени, версии, профиле и расширениях всех доступных платформ*/
+void OpenCLTest_I4_Getting_Informations_About_All_Available_Platforms();

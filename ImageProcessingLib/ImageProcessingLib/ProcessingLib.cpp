@@ -165,19 +165,39 @@ void ipGetInfoAboutAvailablePlatforms()
 {
 	// 1-й вызов: для определения количества доступных платформ
 	cl_uint count_platforms = ipGetCountPlatforms();
-	printf("Number of available platforms: %d\n\n", count_platforms);
-	// Выделение памяти под заданное число идентификаторов
+	switch (count_platforms) {
+	case -101:
+		// По идее, должно сработать если в процессе подсчёта платформ произошло что-то непредвиденное и в качестве значения количества доступных платформ вернулся код ошибки -101.
+		// Связано это может быть с ошибкой при выполнении самой функции (чисто моё мнение, маловероятно). Надо вывести соответствующее сообщение об ошибке и прервать выполнение функции.
+		printf("Error counting available platforms.\n  > [problem area: the \"ipGetInfoAboutAvailablePlatforms\" function]\n");
+		return;
+	case -102:
+		// По идее, должно сработать если в процессе подсчёта платформ произошло что-то непредвиденное и в качестве значения количества доступных платформ вернулся код ошибки -102. 
+		// Связано это может быть с проблемой работы хоста (чисто моё мнение). Надо вывести соответствующее сообщение об ошибке и прервать выполнение функции.
+		printf("Error in calculating the number of available platforms: host.\n  > [problem area: the \"ipGetInfoAboutAvailablePlatforms\" function]\n");
+		return;
+	case -103:
+		// По идее, должно сработать если в процессе подсчёта платформ произошло что-то непредвиденное и в качестве значения количества доступных платформ вернулся код ошибки -103. 
+		// Не имею ни малейшего понятия, почему это произошло. Надо вывести соответствующее сообщение об ошибке и прервать выполнение функции.
+		printf("Error in calculating the number of available platforms: unknown.\n  > [problem area: the \"ipGetInfoAboutAvailablePlatforms\" function]\n");
+		return;
+	default:
+		// Подсчёта количества доступных платформ произошёл без ошибок. Вывести на экран количество подсчитанных платформ и продолжить работу функции.
+		printf("Number of available platforms: %d\n\n", count_platforms);
+		break;
+	}
+	// Выделение памяти под заданное число идентификаторов. Обработка ошибок здесь не нужна, если проблема есть, то программа прервёт свой выполнение ещё на на этапе выполнения функции.
 	cl_platform_id* platforms = ipGetArrPlatforms(count_platforms);
 	size_t size;
 	for (cl_uint i = 0; i < count_platforms; i++)
 	{
 		printf("Platform[%d]:\n", i);
-		// Определение и вывод профиля платформы (что бы это ни значило)
-		ipGetInfoAboutPlatform(platforms[i], CL_PLATFORM_PROFILE, size, "Profile");
 		// Определение и вывод имени платформы
 		ipGetInfoAboutPlatform(platforms[i], CL_PLATFORM_NAME, size, "Name");
 		// Определение и вывод номер версии платформы
 		ipGetInfoAboutPlatform(platforms[i], CL_PLATFORM_VERSION, size, "Version");
+		// Определение и вывод профиля платформы (что бы это ни значило)
+		ipGetInfoAboutPlatform(platforms[i], CL_PLATFORM_PROFILE, size, "Profile");
 		// Определение и вывод доступные расширения платформы
 		ipGetInfoAboutPlatform(platforms[i], CL_PLATFORM_EXTENSIONS, size, "Extensions");
 		printf("\n");
