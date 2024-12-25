@@ -3,7 +3,9 @@
 #include <cstdlib>
 #include "ProcessingLib.h"
 
+/////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////// Платформы /////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////////////////
 
 cl_uint ipGetCountPlatforms()
 {
@@ -206,10 +208,13 @@ void ipGetInfoAboutAvailablePlatforms()
 	delete[] platforms;
 }
 
+//////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////// Устройства /////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////
 
 cl_uint ipGetCountDevices(cl_platform_id platform, cl_device_info device_type)
 {
+	// Функция для подсчёта количества доступных устройств заданного типа
 	cl_uint res, status;
 	if (platform == NULL)
 	{
@@ -220,7 +225,45 @@ cl_uint ipGetCountDevices(cl_platform_id platform, cl_device_info device_type)
 	}
 	else if (device_type == NULL) status = clGetDeviceIDs(platform, CL_DEVICE_TYPE_ALL, 0, NULL, &res);
 	else status = clGetDeviceIDs(platform, device_type, 0, NULL, &res);
-	return res;
+	switch (status) {
+	case CL_SUCCESS:
+		// Функция clGetDeviceIDs выполнена успешно, количество доступных для данной платформы устройств заданного типа (или вообще всех), посчитано. Вернуть посчитанное значение.
+		return res;
+	case CL_INVALID_PLATFORM:
+		// Переданная платформа (параметр platform) не является допустимой платформой. По идее, это значение может быть получено вследствии ошибки при передаче данной функции платформы (могла быть 
+		// сформирована неправильно, или что-то подобное, не знаю). Вывести соответствующее сообщение об ошибке и вернуть код ошибки.
+		printf("The provided platform is not a valid platform.\n  > [problem area: the \"ipGetCountDevices\" function]\n");
+		return -201;
+	case CL_INVALID_DEVICE_TYPE:
+		// Переданная тип устройства (параметр device_type) не является допустимым значением. По идее, это значение может быть получено вследствии ошибки при передаче данной функции типа устройства. 
+		// Вывести соответствующее сообщение об ошибке и вернуть код ошибки.
+		printf("The provided device type is not a valid value.\n  > [problem area: the \"ipGetCountDevices\" function]\n");
+		return -202;
+	case CL_INVALID_VALUE:
+		// Выпадает если значение количество записей идентификаторов устройств, которые могут быть добавлены в возвращаемый функцией clGetDeviceIDs массив (3-й аргумент функции clGetDeviceIDs), равно 
+		// нулю, а сам возвращаемый функцией clGetDeviceIDs массив (4-й параметр функции clGetDeviceIDs) не равен указателю на ноль (NULL), ИЛИ если и адрес области памяти, куда записывается количество 
+		// подсчитываемых устройств (5-й параметр функции clGetDeviceIDs), и массив устройств (4-й параметр функции clGetDeviceIDs) равны указателю на ноль (NULL).
+		// Вывести соответствующее сообщение об ошибке и вернуть код ошибки.
+		printf("Error when passing arguments to the function for counting the number of devices.\n  > [problem area: the \"ipGetCountDevices\" function]\n");
+		return -203;
+	case CL_DEVICE_NOT_FOUND:
+		// Не найдено устройств, соответствующих переданному типу. Вывести соответствующее сообщение об ошибке и вернуть код ошибки.
+		printf("No OpenCL devices that matched device_type were found.\n  > [problem area: the \"ipGetCountDevices\" function]\n");
+		return -204;
+	case CL_OUT_OF_RESOURCES:
+		// Не удалось выделить ресурсы, требуемые реализацией OpenCL на устройстве. Вывести соответствующее сообщение об ошибке и вернуть код ошибки.
+		printf("There is a failure to allocate resources required by the OpenCL implementation on the device.\n  > [problem area: the \"ipGetCountDevices\" function]\n");
+		return -205;
+	case CL_OUT_OF_HOST_MEMORY:
+		// Не удалось выделить ресурсы, требуемые реализацией OpenCL, на хосте. Вывести соответствующее сообщение об ошибке и вернуть код ошибки. По идее, эта ошибка может вылезти только из-за 
+		// неисправности самого хоста.
+		printf("There is a failure to allocate resources required by the OpenCL implementation on the host.\n  > [problem area: the \"ipGetCountDevices\" function]\n");
+		return -206;
+	default:
+		// Ничто из вышеперечисленного, вывестина экран сообщение о неизвестной ошибке и вернуть код ошибки.
+		printf("WARNING: unknown error when calculating the number of available devices to selected platform.\n  > [problem area: the \"ipGetCountDevices\" function]\n");
+		return -207;
+	}
 }
 
 cl_device_id* ipGetArrDevices(cl_platform_id platform, cl_device_info device_type, cl_uint count)
