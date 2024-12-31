@@ -38,7 +38,7 @@ cl_uint ipGetCountPlatforms()
 cl_platform_id* ipGetArrPlatforms(cl_uint count)
 {
 	// Функция для получения массива доступных платформ
-	cl_uint subCount = count;		// Ввёл для обработки случая с нулём в качестве аргумента функции
+	cl_uint subCount = (int)count;		// Ввёл для обработки случая с нулём в качестве аргумента функции
 	cl_platform_id* res;
 	// Я хочу, чтобы в случае когда пользователь в качестве аргумента функции передал значение не больше нуля, то происходил перерасчёт доступных платформ
 	if (count <= 0) subCount = ipGetCountPlatforms();
@@ -235,14 +235,14 @@ cl_uint ipGetCountDevices(cl_platform_id platform, cl_device_info device_type)
 		printf("The provided platform is not a valid platform.\n  > [problem area: the \"ipGetCountDevices\" function]\n");
 		return -201;
 	case CL_INVALID_DEVICE_TYPE:
-		// Переданная тип устройства (параметр device_type) не является допустимым значением. По идее, это значение может быть получено вследствии ошибки при передаче данной функции типа устройства. 
+		// Переданный тип устройства (параметр device_type) не является допустимым значением. По идее, это значение может быть получено вследствии ошибки при передаче данной функции типа устройства. 
 		// Вывести соответствующее сообщение об ошибке и вернуть код ошибки.
 		printf("The provided device type is not a valid value.\n  > [problem area: the \"ipGetCountDevices\" function]\n");
 		return -202;
 	case CL_INVALID_VALUE:
 		// Выпадает если значение количество записей идентификаторов устройств, которые могут быть добавлены в возвращаемый функцией clGetDeviceIDs массив (3-й аргумент функции clGetDeviceIDs), равно 
-		// нулю, а сам возвращаемый функцией clGetDeviceIDs массив (4-й параметр функции clGetDeviceIDs) не равен указателю на ноль (NULL), ИЛИ если и адрес области памяти, куда записывается количество 
-		// подсчитываемых устройств (5-й параметр функции clGetDeviceIDs), и массив устройств (4-й параметр функции clGetDeviceIDs) равны указателю на ноль (NULL).
+		// нулю, а сам возвращаемый функцией clGetDeviceIDs массив (4-й параметр функции clGetDeviceIDs) НЕ равен указателю на ноль (NULL), ИЛИ если И адрес области памяти, куда записывается количество 
+		// подсчитываемых устройств (5-й параметр функции clGetDeviceIDs), И массив устройств (4-й параметр функции clGetDeviceIDs) равны указателю на ноль (NULL).
 		// Вывести соответствующее сообщение об ошибке и вернуть код ошибки.
 		printf("Error when passing arguments to the function for counting the number of devices.\n  > [problem area: the \"ipGetCountDevices\" function]\n");
 		return -203;
@@ -255,8 +255,8 @@ cl_uint ipGetCountDevices(cl_platform_id platform, cl_device_info device_type)
 		printf("There is a failure to allocate resources required by the OpenCL implementation on the device.\n  > [problem area: the \"ipGetCountDevices\" function]\n");
 		return -205;
 	case CL_OUT_OF_HOST_MEMORY:
-		// Не удалось выделить ресурсы, требуемые реализацией OpenCL, на хосте. Вывести соответствующее сообщение об ошибке и вернуть код ошибки. По идее, эта ошибка может вылезти только из-за 
-		// неисправности самого хоста.
+		// Не удалось выделить ресурсы, требуемые реализацией OpenCL, на хосте. Вывести соответствующее сообщение об ошибке и вернуть код ошибки. По идее, эта ошибка может вылезти только из-за неисправности
+		// самого хоста.
 		printf("There is a failure to allocate resources required by the OpenCL implementation on the host.\n  > [problem area: the \"ipGetCountDevices\" function]\n");
 		return -206;
 	default:
@@ -272,31 +272,126 @@ cl_device_id* ipGetArrDevices(cl_platform_id platform, cl_device_info device_typ
 	cl_platform_id subPlatform = platform;
 	cl_device_info subDevType = device_type;
 	cl_uint status, subCount = count;
-	if (count == 0 || platform == NULL || device_type == NULL)
+	if (count <= 0 || platform == NULL || device_type == NULL)
 	{
-		// Если было передано количество устройств, равное 0, или , то идёт перерасчёт доступных устройств и на выход подаётся массив всех доступных устроствя для данной/доступной платформы
+		// Если было передано количество устройств, не меньшее, чем 0, или если передали нулевой указатель вместо платформы и/или типа устройств, то идёт процедура перерасчёта доступных 
+		// устройств и на выход подаётся массив всех доступных устроств для переданной или переопределённой платформы.
+		// Смысл этого блока if: пересчитать количество доступных устройств.
 		if (platform == NULL)
 		{
-			// Если не была передана платформа, то происходит поиск доступных платформ и выбор первой попавшейся
+			// Если не была передана платформа, то происходит поиск доступных платформ и выбор первой попавшейся.
 			subPlatform = ipGetPlatformByIndex(NULL, 0, NULL);
 			if (device_type == NULL)
 			{
-				// Если не был передан тип устройств, то идёт перерасчёт всех доступных устройств всех доступных типов для перевыбранной платформой
+				// Если не был передан тип устройств, то идёт перерасчёт всех доступных устройств всех доступных типов для переопределенной платформой.
 				subDevType = CL_DEVICE_TYPE_ALL;
-				subCount = ipGetCountDevices(subPlatform, subDevType);
 			}
-			else subCount = ipGetCountDevices(subPlatform, subDevType);
+			subCount = ipGetCountDevices(subPlatform, subDevType);
 		}
-		else if (device_type == NULL)
+		else 
 		{
-			// Если не был передан тип устройств, то идёт перерасчёт всех доступных устройств всех доступных типов для изначально выбранной платформой
-			subDevType = CL_DEVICE_TYPE_ALL;
+			if (device_type == NULL)
+			{
+				// Если не был передан тип устройств, то идёт перерасчёт всех доступных устройств всех доступных типов для изначально выбранной платформой
+				subDevType = CL_DEVICE_TYPE_ALL;
+			}
 			subCount = ipGetCountDevices(subPlatform, subDevType);
 		}
 	}
+	switch (subCount)
+	{
+	case -201:
+		// По идее, должно сработать если в качестве аргумента функции пользователь передал конкретное значение -201 и по каким-то причинам оно успешно прошло вышестоящую проверку (чего явно не должно быть,
+		// но я устал и исправлять это не буду). Либо же в процессе перерасчёта произошло что-то непредвиденное и в качестве значения количества доступных устройств вернулся код ошибки -201. Связано это 
+		// может быть с повреждением данных при передаче данной функции платформы (параметр platform). Если эта ошибка велезла, то функция clGetDeviceIDs посчитала переданную ей платформу недопустимой.
+		// В любом случае надо вывести соответствующее сообщение об ошибке, прервать выполнение программы с возвращением соответствующего кода ошибки.
+		printf("Error counting available Devices. The provided platform is not a valid platform.\n  > [problem area: the \"ipGetArrDevices\" function]\n");
+		exit(-2011);
+	case -202:
+		// Должно сработать если в качестве аргумента функции пользователь передал конкретное значение -202 и по каким-то причинам оно успешно прошло вышестоящую проверку. Либо же в процессе перерасчёта 
+		// произошло что-то непредвиденное и в качестве значения количества доступных устройств вернулся код ошибки -202. Связано это может быть с повреждением данных при передаче данной функции 
+		// типа устройств. Если эта ошибка вылезла, то функция clGetDeviceIDs посчитала переданный тип устройств (параметр device_type) недопустимым значением. Следует вывести соответствующее сообщение об 
+		// ошибке и прервать выполнение программы с возвращением соответствующего кода ошибки.
+		printf("Error counting available Devices. The provided device type is not a valid value.\n  > [problem area: the \"ipGetArrDevices\" function]\n");
+		exit(-2021);
+	case -203:
+		// Выпадает при ошибке при передаче функции clGetDeviceIDs принимаемых ею параметров. Либо если в качестве аргумента функции пользователь передал конкретное значение -203 и по каким-то причинам оно
+		// успешно прошло вышестоящую проверку. Либо же в процессе перерасчёта произошло что-то непредвиденное и в качестве значения количества доступных устройств вернулся код ошибки -203. В любом случае 
+		// дать разработчику п**** и заставить исправлять косяки, вывести соответствующее сообщение об ошибке и прервать выполнение программы с возвращением соответствующего кода ошибки.
+		printf("Error counting available Devices. Error when passing arguments to the function for counting the number of devices.\n  > [problem area: the \"ipGetArrDevices\" function]\n");
+		exit(-2031);
+	case -204:
+		// Должно сработать если в качестве аргумента функции пользователь передал конкретное значение -204 и по каким-то причинам оно успешно прошло вышестоящую проверку. Либо же в процессе перерасчёта 
+		// произошло что-то непредвиденное и в качестве значения количества доступных устройств вернулся код ошибки -204. Связано это с тем, что функции clGetDeviceIDs не удалось обнаружить устройств, 
+		// соответствующие переданному ей (функции clGetDeviceIDs) типу. Следует вывести соответствующее сообщение об ошибке и прервать выполнение программы с возвращением соответствующего кода ошибки.
+		printf("Error counting available Devices. No OpenCL devices that matched device_type were found.\n  > [problem area: the \"ipGetArrDevices\" function]\n");
+		exit(-2041);
+	case -205:
+		// Должно сработать если в качестве аргумента функции пользователь передал конкретное значение -205 и по каким-то причинам оно успешно прошло вышестоящую проверку. Либо же в процессе перерасчёта 
+		// произошло что-то непредвиденное и в качестве значения количества доступных устройств вернулся код ошибки -205. Связано это с тем, что функции clGetDeviceIDs не удалось выделить ресурсы, 
+		// требуемые реализацией OpenCL, на устройстве. Следует вывести соответствующее сообщение об ошибке и прервать выполнение программы с возвращением соответствующего кода ошибки.
+		printf("Error counting available Devices. There is a failure to allocate resources required by the OpenCL implementation on the device.\n  > [problem area: the \"ipGetArrDevices\" function]\n");
+		exit(-2051);
+	case -206:
+		// Должно сработать если в качестве аргумента функции пользователь передал конкретное значение -206 и по каким-то причинам оно успешно прошло вышестоящую проверку. Либо же в процессе перерасчёта 
+		// произошло что-то непредвиденное и в качестве значения количества доступных устройств вернулся код ошибки -206. Связано это с тем, что функции clGetDeviceIDs не удалось выделить ресурсы, 
+		// требуемые реализацией OpenCL, на хосте. По идее, эта ошибка может вылезти только из-за неисправности самого хоста. Следует вывести соответствующее сообщение об ошибке и прервать выполнение 
+		// программы с возвращением соответствующего кода ошибки.
+		printf("Error counting available Devices. There is a failure to allocate resources required by the OpenCL implementation on the host.\n  > [problem area: the \"ipGetArrDevices\" function]\n");
+		exit(-2061);
+	case -207:
+		// Должно сработать если в качестве аргумента функции пользователь передал конкретное значение -207 и по каким-то причинам оно успешно прошло вышестоящую проверку. Либо же в процессе перерасчёта 
+		// произошло что-то непредвиденное и в качестве значения количества доступных устройств вернулся код ошибки -207. Связано это с тем, что произошла неизвестная ошибка. Следует вывести соответствующее
+		// сообщение об ошибке и прервать выполнение программы с возвращением соответствующего кода ошибки.
+		printf("Error counting available Devices. Unknown error when calculating the number of available devices to selected platform.\n  > [problem area: the \"ipGetArrDevices\" function]\n");
+		exit(-2071);
+	default:
+		// Успешно пересчитано/передано без осложнений и косяков. Ничего не делать, вернуться к выполнению функционала.
+		break;
+	}
 	res = new cl_device_id[subCount];
 	status = clGetDeviceIDs(subPlatform, subDevType, subCount, res, NULL);
-	return res;
+	switch (status)
+	{
+	case CL_SUCCESS:
+		// Память успешно выделилась. Необходимо вернуть получившийся массив.
+		return res;
+	case CL_INVALID_PLATFORM:
+		// Переданная функции clGetDeviceIDs платформа (subPlatform) не является допустимой платформой. По идее, это значение может быть получено вследствии ошибки при передаче данной функции платформы 
+		// (не важно, является она изначально переданной исходной функции, или же переопределённой в ней). Как это значение может вылезти? Я не знаю. Но, по идее модульного тестирования, должен это значение
+		// обработать. Вывести соответствующее сообщение об ошибке, прервать выполнение программы и вернуть код ошибки.
+		printf("Error detecting available devices. The provided platform is not a valid platform.\n  > [problem area: the \"ipGetArrDevices\" function]\n");
+		exit(-2012);
+	case CL_INVALID_DEVICE_TYPE:
+		// Переданный функции clGetDeviceIDs тип устройств (subPlatform), массив которых надо выделить, не является допустимым. По идее, это значение может быть получено вследствии ошибки при передаче 
+		// данной функции (ответ на вопрос "Кому?") типа устройств (не важно, является он изначально переданным исходной функции, или же переопределённым в ней). Как это значение может вылезти? Опять же, Я 
+		// не знаю. По той же идее модульного тестирования я должен это значение обработать. Вывести соответствующее сообщение об ошибке, прервать выполнение программы и вернуть код ошибки.
+		printf("Error detecting available devices. The provided device type is not a valid value.\n  > [problem area: the \"ipGetArrDevices\" function]\n");
+		exit(-2022);
+	case CL_INVALID_VALUE:
+		// Выпадает если значение количество записей идентификаторов устройств, которые могут быть добавлены в возвращаемый функцией clGetDeviceIDs массив (3-й аргумент функции clGetDeviceIDs), равно 
+		// нулю, а сам возвращаемый функцией clGetDeviceIDs массив (4-й параметр функции clGetDeviceIDs) НЕ равен указателю на ноль (NULL), ИЛИ если И адрес области памяти, куда записывается количество 
+		// подсчитываемых устройств (5-й параметр функции clGetDeviceIDs), И массив устройств (4-й параметр функции clGetDeviceIDs) равны указателю на ноль (NULL). Вывести соответствующее сообщение об 
+		// ошибке, прервать выполнение программы и вернуть код ошибки.
+		printf("Error detecting available devices. Error when passing arguments to the function for counting the number of devices.\n  > [problem area: the \"ipGetArrDevices\" function]\n");
+		exit(-2032);
+	case CL_DEVICE_NOT_FOUND:
+		// Не найдено устройств, соответствующих переданному типу. Вывести соответствующее сообщение об ошибке, прервать выполнение программы и вернуть код ошибки.
+		printf("Error detecting available devices. No OpenCL devices that matched device_type were found.\n  > [problem area: the \"ipGetArrDevices\" function]\n");
+		exit(-2042);
+	case CL_OUT_OF_RESOURCES:
+		// Не удалось выделить ресурсы, требуемые реализацией OpenCL, на устройстве. Вывести соответствующее сообщение об ошибке, прервать выполнение программы и вернуть код ошибки.
+		printf("Error detecting available devices. There is a failure to allocate resources required by the OpenCL implementation on the device.\n  > [problem area: the \"ipGetArrDevices\" function]\n");
+		exit(-2052);
+	case CL_OUT_OF_HOST_MEMORY:
+		// Не удалось выделить ресурсы, требуемые реализацией OpenCL, на хосте. Вывести соответствующее сообщение об ошибке, прервать выполнение программы и вернуть код ошибки.
+		printf("Error detecting available devices. There is a failure to allocate resources required by the OpenCL implementation on the host.\n  > [problem area: the \"ipGetArrDevices\" function]\n");
+		exit(-2062);
+	default:
+		// Ничто из вышеперечисленного. Вывести соответствующее сообщение об ошибке, прервать выполнение программы и вернуть код ошибки.
+		printf("Error detecting available devices. Unknown error.\n  > [problem area: the \"ipGetArrDevices\" function]\n");
+		exit(-2072);
+	}
 }
 
 cl_device_id ipGetDeviceByIndex(cl_device_id* devices, cl_uint count, int idx)

@@ -19,3 +19,6 @@ void OpenCLTest_I4_Getting_Informations_About_All_Available_Platforms();
 
 /*Функция для проверки работоспособности функции ipGetCountDevices, получающей количество доступных устройств заданного типа для выбранной платформы.*/
 void OpenCLTest_I5_Getting_Count_Of_Devices_To_Selected_Platform();
+
+/*Функция для проверки работоспособности функции ipGetArrDevices, получающей массив доступных устройств для выбранной платформы. Также проверяется внутренний функционал этой функции*/
+void OpenCLTest_I6_Getting_Array_Of_Devices_To_Selected_Platform();

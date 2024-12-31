@@ -15,6 +15,7 @@ int main(void)
 	OpenCLTest_I3_Getting_Information_About_Available_Platforms();
 	OpenCLTest_I4_Getting_Informations_About_All_Available_Platforms();
 	OpenCLTest_I5_Getting_Count_Of_Devices_To_Selected_Platform();
+	OpenCLTest_I6_Getting_Array_Of_Devices_To_Selected_Platform();
 	printf("\nEnd testing:\t---***---\n\n");
 
 	ipGetInfoAboutAvailableDevices();

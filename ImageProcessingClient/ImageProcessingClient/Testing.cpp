@@ -24,11 +24,11 @@ void Checking_clGetPlatformIds(cl_uint num_entries, cl_platform_id* platforms, c
 	}
 }
 
-cl_platform_id* Checking_ipGetArrPlatforms(cl_int count, bool recounting = false)
+cl_platform_id* Checking_ipGetArrPlatforms(cl_uint count, bool recounting = false)
 {
 	// Ввожу эту функцию для того, чтобы обработать передачу значений входных параметров не больше нуля и привести соответствующую функцию библиотеки к рабочему варианту, 
 	// если текущий вариант не работает
-	cl_int subCount = count;
+	cl_int subCount = (int)count;
 	cl_platform_id* res;
 	if (recounting)
 		if (count <= 0) 
@@ -111,6 +111,84 @@ void Checking_ipGetInfoAboutAvailablePlatforms(cl_uint count_platforms = ipGetCo
 	}
 	printf("\n");
 	delete[] platforms;
+}
+
+cl_device_id* Checking_ipGetArrDevices(cl_platform_id platform, cl_device_info device_type, cl_uint count, bool prov = true)
+{
+	cl_device_id* res;
+	cl_platform_id subPlatform = platform;
+	cl_device_info subDevType = device_type;
+	cl_uint status;
+	cl_int subCount = (int)count;
+	if (prov == true) {
+		if (subCount <= 0 || platform == NULL || device_type == NULL) {
+			if (platform == NULL) {
+				subPlatform = ipGetPlatformByIndex(NULL, 0, NULL);
+				if (device_type == NULL)
+					subDevType = CL_DEVICE_TYPE_ALL;
+				subCount = ipGetCountDevices(subPlatform, subDevType);
+			}
+			else {
+				if (device_type == NULL) {
+					subDevType = CL_DEVICE_TYPE_ALL;
+				}
+				subCount = ipGetCountDevices(subPlatform, subDevType);
+			}
+		}
+	}
+	switch (subCount) {
+	case -201:
+		printf("Error counting available Devices. The provided platform is not a valid platform.\n  > [problem area: the \"ipGetArrDevices\" function]\n");
+		return NULL;
+	case -202:
+		printf("Error counting available Devices. The provided device type is not a valid value.\n  > [problem area: the \"ipGetArrDevices\" function]\n");
+		return NULL;
+	case -203:
+		printf("Error counting available Devices. Error when passing arguments to the function for counting the number of devices.\n  > [problem area: the \"ipGetArrDevices\" function]\n");
+		return NULL;
+	case -204:
+		printf("Error counting available Devices. No OpenCL devices that matched device_type were found.\n  > [problem area: the \"ipGetArrDevices\" function]\n");
+		return NULL;
+	case -205:
+		printf("Error counting available Devices. There is a failure to allocate resources required by the OpenCL implementation on the device.\n  > [problem area: the \"ipGetArrDevices\" function]\n");
+		return NULL;
+	case -206:
+		printf("Error counting available Devices. There is a failure to allocate resources required by the OpenCL implementation on the host.\n  > [problem area: the \"ipGetArrDevices\" function]\n");
+		return NULL;
+	case -207:
+		printf("Error counting available Devices. Unknown error when calculating the number of available devices to selected platform.\n  > [problem area: the \"ipGetArrDevices\" function]\n");
+		return NULL;
+	default:
+		break;
+	}
+	res = new cl_device_id[subCount];
+	status = clGetDeviceIDs(subPlatform, subDevType, subCount, res, NULL);
+	switch (status) {
+	case CL_SUCCESS:
+		printf("Getting array of devices successful!\n");
+		return res;
+	case CL_INVALID_PLATFORM:
+		printf("Error detecting available devices. The provided platform is not a valid platform.\n  > [problem area: the \"ipGetArrDevices\" function]\n");
+		return NULL;
+	case CL_INVALID_DEVICE_TYPE:
+		printf("Error detecting available devices. The provided device type is not a valid value.\n  > [problem area: the \"ipGetArrDevices\" function]\n");
+		return NULL;
+	case CL_INVALID_VALUE:
+		printf("Error detecting available devices. Error when passing arguments to the function for counting the number of devices.\n  > [problem area: the \"ipGetArrDevices\" function]\n");
+		return NULL;
+	case CL_DEVICE_NOT_FOUND:
+		printf("Error detecting available devices. No OpenCL devices that matched device_type were found.\n  > [problem area: the \"ipGetArrDevices\" function]\n");
+		return NULL;
+	case CL_OUT_OF_RESOURCES:
+		printf("Error detecting available devices. There is a failure to allocate resources required by the OpenCL implementation on the device.\n  > [problem area: the \"ipGetArrDevices\" function]\n");
+		return NULL;
+	case CL_OUT_OF_HOST_MEMORY:
+		printf("Error detecting available devices. There is a failure to allocate resources required by the OpenCL implementation on the host.\n  > [problem area: the \"ipGetArrDevices\" function]\n");
+		return NULL;
+	default:
+		printf("Error detecting available devices. Unknown error.\n  > [problem area: the \"ipGetArrDevices\" function]\n");
+		return NULL;
+	}
 }
 
 ////////////////////////////////////////////////// Дальше пойдут функции, через которые клиент вызывает тесты ////////////////////////////////////////////////////////////////
@@ -248,4 +326,54 @@ void OpenCLTest_I5_Getting_Count_Of_Devices_To_Selected_Platform()
 	// Тест 8-й. Передаём в качестве аргументов функции нулевых указателей (NULL). Ожидаемый результат: успешное выполнение библиотечной функции с заходом на перерасчёт
 	// доступных платформ и вывод на экран посчитанного  количества всех доступных для переопределённой платформы устройств.
 	printf("Number of available devices: %d\n", ipGetCountDevices(NULL, NULL));
+	delete[] platforms;
+}
+
+void OpenCLTest_I6_Getting_Array_Of_Devices_To_Selected_Platform()
+{
+	printf("\n/// Testing ipGetArrDevices function ///\n");
+	cl_platform_id* platforms = ipGetArrPlatforms(ipGetCountPlatforms());
+	cl_platform_id pm = platforms[0];
+	cl_device_id* devices;
+	// Тест 1-й. Простой вызов функции из библиотеки для получения массива доступных устройств типа GPU для выбранной платформы. Ожидаемый результат: успешное выполнение библиотечной функции. На экран 
+	// ничего выводиться не должно
+	devices = ipGetArrDevices(pm, CL_DEVICE_TYPE_GPU, ipGetCountDevices(pm, CL_DEVICE_TYPE_GPU));
+	// Тест 2-й. Простой вызов функции из библиотеки для получения массива доступных устройств всех типов для выбранной платформы. Ожидаемый результат: успешное выполнение библиотечной функции. На экран 
+	// ничего выводиться не должно
+	devices = ipGetArrDevices(pm, CL_DEVICE_TYPE_ALL, ipGetCountDevices(pm, CL_DEVICE_TYPE_ALL));
+	// Тест 3-й. Простой вызов функции тестирования Checking_ipGetArrDevices для получения массива доступных устройств типа GPU для выбранной платформы. Ожидаемый результат: успешное выполнение тестировочной
+	// функции. На экран должно вывестись сообщение об успешном выполнении функции
+	devices = Checking_ipGetArrDevices(pm, CL_DEVICE_TYPE_GPU, ipGetCountDevices(pm, CL_DEVICE_TYPE_GPU));
+	// Тест 4-й. Простой вызов функции тестирования Checking_ipGetArrDevices для получения массива доступных устройств типа CPU для выбранной платформы. Ожидаемый результат: успешное выполнение тестировочной
+	// функции. На экран должно вывестись 2 сообщения об ошибке.
+	devices = Checking_ipGetArrDevices(pm, CL_DEVICE_TYPE_CPU, ipGetCountDevices(pm, CL_DEVICE_TYPE_CPU));
+	// Тест 5-й. Простой вызов функции тестирования Checking_ipGetArrDevices для получения массива доступных устройств всех типов для выбранной платформы. Ожидаемый результат: успешное выполнение 
+	// тестировочной функции. На экран должно вывестись сообщение об успешном выполнении функции
+	devices = Checking_ipGetArrDevices(pm, CL_DEVICE_TYPE_ALL, ipGetCountDevices(pm, CL_DEVICE_TYPE_ALL));
+	// Тест 6-й. Вызов функции тестирования Checking_ipGetArrDevices с параметром count < 0. Ожидаемый результат: успешное выполнение тестировочной функции. На экран должно вывестись сообщение об успешном 
+	// выполнении функции
+	devices = Checking_ipGetArrDevices(pm, CL_DEVICE_TYPE_GPU, -10);
+	// Тест 7-й. Вызов функции тестирования Checking_ipGetArrDevices с параметром count = 0. Ожидаемый результат: успешное выполнение тестировочной функции. На экран должно вывестись сообщение об успешном 
+	// выполнении функции
+	devices = Checking_ipGetArrDevices(pm, CL_DEVICE_TYPE_GPU, 0);
+	// Тест 8-й. Вызов функции тестирования Checking_ipGetArrDevices с параметром count = -201. Ожидаемый результат: ошибка с прерыванием. На экран должно вывестись сообщение с описанием ошибки
+	devices = Checking_ipGetArrDevices(pm, CL_DEVICE_TYPE_GPU, -201, false);
+	// Тест 9-й. Вызов функции тестирования Checking_ipGetArrDevices с параметром count = -202. Ожидаемый результат: ошибка с прерыванием. На экран должно вывестись сообщение с описанием ошибки
+	devices = Checking_ipGetArrDevices(pm, CL_DEVICE_TYPE_GPU, -202, false);
+	// Тест 10-й. Вызов функции тестирования Checking_ipGetArrDevices с параметром count = -203. Ожидаемый результат: ошибка с прерыванием. На экран должно вывестись сообщение с описанием ошибки
+	devices = Checking_ipGetArrDevices(pm, CL_DEVICE_TYPE_GPU, -203, false);
+	// Тест 11-й. Вызов функции тестирования Checking_ipGetArrDevices с параметром count = -204. Ожидаемый результат: ошибка с прерыванием. На экран должно вывестись сообщение с описанием ошибки
+	devices = Checking_ipGetArrDevices(pm, CL_DEVICE_TYPE_GPU, -204, false);
+	// Тест 12-й. Вызов функции тестирования Checking_ipGetArrDevices с параметром count = -205. Ожидаемый результат: ошибка с прерыванием. На экран должно вывестись сообщение с описанием ошибки
+	devices = Checking_ipGetArrDevices(pm, CL_DEVICE_TYPE_GPU, -205, false);
+	// Тест 13-й. Вызов функции тестирования Checking_ipGetArrDevices с параметром count = -206. Ожидаемый результат: ошибка с прерыванием. На экран должно вывестись сообщение с описанием ошибки
+	devices = Checking_ipGetArrDevices(pm, CL_DEVICE_TYPE_GPU, -206, false);
+	// Тест 14-й. Вызов функции тестирования Checking_ipGetArrDevices с параметром count = -207. Ожидаемый результат: ошибка с прерыванием. На экран должно вывестись сообщение с описанием ошибки
+	devices = Checking_ipGetArrDevices(pm, CL_DEVICE_TYPE_GPU, -207, false);
+	// Тест 15-й. Отключим проверку на передаваемую платформу/число устройств/тип устройств. Ожидаемый результат: ошибка с прерыванием. На экран должно вывестись сообщение с описанием ошибки
+	devices = Checking_ipGetArrDevices(NULL, CL_DEVICE_TYPE_GPU, ipGetCountDevices(pm, CL_DEVICE_TYPE_GPU), false);
+	// Тест 16-й. Отключим проверку на передаваемую платформу/число устройств/тип устройств. Ожидаемый результат: ошибка с прерыванием. На экран должно вывестись сообщение с описанием ошибки
+	devices = Checking_ipGetArrDevices(pm, NULL, 1, false);
+	delete[] devices;
+	delete[] platforms;
 }
