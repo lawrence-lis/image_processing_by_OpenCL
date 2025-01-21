@@ -1,56 +1,253 @@
 #include <stdio.h>
+#include <fstream>
+#include <sstream>
 // Если начнёт выёбываться на определение функций, то сотри и заново вставь следующую строку
 #include "ProcessingLib.h"
-#include "CL/cl.h"
-#include "Testing.h"
-#include <opencv2/opencv.hpp>
+#include "CL/cl.hpp"
+#include "FreeImage.h"
 
-using namespace cv;
+size_t RoundUp(size_t group_size, cl_int global_size)
+{
+	// Округление для рабочих групп
+	int r = global_size % group_size;
+	if (r == 0)
+		return global_size;
+	else
+		return global_size + group_size - r;
+}
+
+void CreateImageFromBuffer(const unsigned char* buffer, unsigned width, unsigned height)
+{
+	FreeImage_Initialise();
+	FIBITMAP* bitmap = FreeImage_Allocate(width, height, 32);
+	if (!bitmap) {
+		printf("Error creating image.\n");
+		FreeImage_DeInitialise();
+		return;
+	}
+	BYTE* bits = FreeImage_GetBits(bitmap);
+	for (int y = 0; y < height; y++) {
+		for (int x = 0; x < width; x++) {
+			int srcIdx = (y * width + x) * 4;
+			int destIdx = (y) * width * 4 + x * 4;
+
+			bits[destIdx + 0] = buffer[srcIdx + 2];
+			bits[destIdx + 1] = buffer[srcIdx + 1];
+			bits[destIdx + 2] = buffer[srcIdx + 0];
+			bits[destIdx + 3] = buffer[srcIdx + 3];
+		}
+	}
+	FreeImage_Save(FIF_PNG, bitmap, "output.png", 0);
+	FreeImage_Unload(bitmap);
+	FreeImage_DeInitialise();
+}
 
 int main(void)
 {
-	printf("Testing:\t---***---\n");
-	OpenCLTest_I1_Counting_Available_Platforms();
-	printf("End testing:\t---***---\n\n");
-
-	ipGetInfoAboutAvailableDevices();
-
-	cl_device_id device = ipGetDeviceByIndex(NULL, 0, 0);
-	printf("Selected Device:\n");
-	ipGetAllInfoAboutSelectedDevices(device);
-
-	cl_context context1 = ipGetContextByArr(&device, 1);
-	cl_context context2 = ipGetContextByType(CL_DEVICE_TYPE_GPU);
-
-	cl_command_queue queue1 = ipGetComQueueToDevice(context1, device);
-
-	cl_program program = ipGetProgram(context1, "heis.cl");
-
-	cl_int prg_build_log = ipBuildProgram(program, &device);
-
-	cl_kernel kernel = ipGetKernel(program, "test");
-
-	int a = 30;
-	cl_int work = ipSetKernelParam(kernel, 0, sizeof(a), &a);
-
-	size_t gl_size[1] = { 100000 };
-	work = ipWorkKernel(kernel, queue1, 1, gl_size);
-
-	clReleaseKernel(kernel);
-	clReleaseProgram(program);
-	clReleaseCommandQueue(queue1);
-	clReleaseContext(context1);
-	clReleaseContext(context2);
-
-	// Чтение изображения из файла
-	Mat image = imread("cat-animal-art.jpg");
-	// Проверка на успешность чтения
-	if (image.empty()) {
-		printf("Unable to read image\n");
-		return -1;
+	/*/////////////////////////////////////////////////////////////
+	///////// Настройка среды для работы с изображениями //////////
+	/////////////////////////////////////////////////////////////*/
+	const char* fileName = "cat.jpg";
+	FREE_IMAGE_FORMAT format = FreeImage_GetFileType(fileName, 0);
+	FIBITMAP* image = FreeImage_Load(format, fileName);
+	FIBITMAP* temp = image;
+	image = FreeImage_ConvertTo32Bits(image);
+	FreeImage_Unload(temp);
+	auto width = FreeImage_GetWidth(image);
+	auto height = FreeImage_GetHeight(image);
+	char* buffer = new char[width * height * 4];
+	memcpy(buffer, FreeImage_GetBits(image), width * height * 4);
+	FreeImage_Unload(image);
+	cl_image_format clImageFormat;
+	clImageFormat.image_channel_order = CL_RGBA;
+	clImageFormat.image_channel_data_type = CL_UNORM_INT8;
+	/*/////////////////////////////////////////////////////////////
+	///////////// Настройка среды для работы с OpenCL /////////////
+	/////////////////////////////////////////////////////////////*/
+	cl_int err;
+	size_t str_size;
+	char* str;
+	cl_uint num_platforms, num_devices;
+	cl_platform_id platform;
+	cl_device_id device;
+	cl_program program;
+	// Подсчёт платформ
+	err = clGetPlatformIDs(0, NULL, &num_platforms);
+	if (err != CL_SUCCESS) {
+		printf("Error to counting available platforms.\n");
+		exit(-1);
 	}
-	// Отображение изображения
-	namedWindow("Image", WINDOW_NORMAL);
-	imshow("Image", image);
-	waitKey(0);
+	else printf("%d available platform(s).\n", num_platforms);
+	// Выделение массива платформ
+	cl_platform_id* platforms = new cl_platform_id[num_platforms];
+	err = clGetPlatformIDs(num_platforms, platforms, NULL);
+	if (err != CL_SUCCESS) {
+		printf("Error to allocate platforms array.\n");
+		exit(-1);
+	}
+	platform = platforms[0];
+	clGetPlatformInfo(platform, CL_PLATFORM_NAME, 0, NULL, &str_size);
+	str = new char[str_size];
+	clGetPlatformInfo(platform, CL_PLATFORM_NAME, str_size, str, NULL);
+	// Подсчёт устройств
+	err = clGetDeviceIDs(platform, CL_DEVICE_TYPE_GPU, 0, NULL, &num_devices);
+	if (err != CL_SUCCESS) {
+		printf("Error to counting available devices to %s platform.\n", str);
+		exit(-1);
+	}
+	else printf("%d available device(s) to %s platform.\n", num_platforms, str);
+	// Выделение массива устройств
+	cl_device_id* devices = new cl_device_id[num_devices];
+	err = clGetDeviceIDs(platform, CL_DEVICE_TYPE_GPU, num_devices, devices, NULL);
+	if (err != CL_SUCCESS) {
+		printf("Error to allocate available to %s platform devices array.\n", str);
+		exit(-1);
+	}
+	device = devices[0];
+	clGetDeviceInfo(device, CL_DEVICE_NAME, 0, NULL, &str_size);
+	str = new char[str_size];
+	clGetDeviceInfo(device, CL_DEVICE_NAME, str_size, str, NULL);
+	printf("Selected device: %s.\n", str);
+	// Создание контекста
+	cl_context context = clCreateContext(NULL, 1, &device, NULL, NULL, &err);
+	if (err != CL_SUCCESS) {
+		printf("Error to create context to %s device.\n", str);
+		exit(-1);
+	}
+	//Создание очереди команд
+	cl_command_queue commandQueue = clCreateCommandQueue(context, device, 0, &err);
+	if (err != CL_SUCCESS) {
+		printf("Error to create Command Queue.\n");
+		exit(-1);
+	}
+
+	// Создание объекта входного изображения, хранящего данные из передаваемого изображения
+	cl_mem clInputImage = clCreateImage2D(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, &clImageFormat, width, height, 0, buffer, &err);
+	if (err != CL_SUCCESS) {
+		printf("Error to create OpenCL input image object.\n");
+		exit(-1);
+	}
+	// Создание объекта выходного изображения, который сохранит результат выполнения гауссовой фильтрации входного изображения
+	// Этот объект создается без host_ptr, поскольку он будет заполнен данными в ядре.
+	// Кроме того, для mem_flags установлено значение CL_MEM_WRITE_ONLY, потому что образ будет только записан в ядро, но не прочитан.
+	cl_mem clOutputImage = clCreateImage2D(context, CL_MEM_WRITE_ONLY, &clImageFormat, width, height, 0, NULL, &err);
+	if (err != CL_SUCCESS) {
+		printf("Error to create OpenCL output image object.\n");
+		exit(-1);
+	}
+	// Проверка, поддерживается ли изображения устройством, в противном случае - приложение прекратит свою работу
+	cl_bool imageSupport = CL_FALSE;
+	clGetDeviceInfo(device, CL_DEVICE_IMAGE_SUPPORT, sizeof(cl_bool), &imageSupport, NULL);
+	if (imageSupport != CL_TRUE)
+	{
+		printf("OpenCL device does not support images.\n");
+		exit(1);
+	}
+	// Создание сэмплера для выборки объекта изображения
+	cl_sampler sampler = clCreateSampler(context, CL_FALSE, CL_ADDRESS_CLAMP_TO_EDGE, CL_FILTER_NEAREST, &err);
+	if (imageSupport != CL_TRUE)
+	{
+		printf("Error to create sampler.\n");
+		exit(1);
+	}
+	/*/////////////////////////////////////////////////////////////
+	//////////////////////// Работа с ядром ///////////////////////
+	/////////////////////////////////////////////////////////////*/
+	std::ifstream kernel_file("Kernel_Gaussian_Filter.cl", std::ios::in);
+	if (!kernel_file.is_open()) {
+		printf("Error to open kernel file to reading.\n");
+		exit(-1);
+	}
+	std::ostringstream oss;
+	oss << kernel_file.rdbuf();
+	std::string srcStdStr = oss.str();
+	const char* srcStr = srcStdStr.c_str();
+	program = clCreateProgramWithSource(context, 1, (const char**)&srcStr, NULL, &err);
+	if (err != CL_SUCCESS) {
+		printf("Error to create OpenCL program from source.\n");
+		exit(-1);
+	}
+	err = clBuildProgram(program, 0, NULL, NULL, NULL, NULL);
+	if (err != CL_SUCCESS) {
+		char buildLog[16384];
+		clGetProgramBuildInfo(program, device, CL_PROGRAM_BUILD_LOG, sizeof(buildLog), buildLog, NULL);
+		printf("Error in kernel: %s.\n", buildLog);
+		exit(-1);
+	}
+	// Создание объектов ядра для каждого присутствующего в исходном коде ядра
+	cl_kernel gaussian_kernel = clCreateKernel(program, "gaussian_filter", &err);
+	if (err != CL_SUCCESS) {
+		printf("Error to create kernel object.\n");
+		exit(-1);
+	}
+	// Передача аргументов ядру
+	err = clSetKernelArg(gaussian_kernel, 0, sizeof(cl_mem), &clInputImage);
+	if (err != CL_SUCCESS) {
+		printf("Error to set kernel 0 argument.\n");
+		exit(-1);
+	}
+	err = clSetKernelArg(gaussian_kernel, 1, sizeof(cl_mem), &clOutputImage);
+	if (err != CL_SUCCESS) {
+		printf("Error to set kernel 1 argument.\n");
+		exit(-1);
+	}
+	err = clSetKernelArg(gaussian_kernel, 2, sizeof(cl_sampler), &sampler);
+	if (err != CL_SUCCESS) {
+		printf("Error to set kernel 2 argument.\n");
+		exit(-1);
+	}
+	err = clSetKernelArg(gaussian_kernel, 3, sizeof(cl_int), &width);
+	if (err != CL_SUCCESS) {
+		printf("Error to set kernel 3 argument.\n");
+		exit(-1);
+	}
+	err = clSetKernelArg(gaussian_kernel, 4, sizeof(cl_int), &height);
+	if (err != CL_SUCCESS) {
+		printf("Error to set kernel 4 argument.\n");
+		exit(-1);
+	}
+	// Настройка рабочих групп
+	size_t local_work_size[2] = { 16, 16 };
+	size_t global_work_size[2] = { RoundUp(local_work_size[0], width), RoundUp(local_work_size[1], height) };
+	// Запуск ядер на исполение 
+	err = clEnqueueNDRangeKernel(commandQueue, gaussian_kernel, 2, NULL, global_work_size, local_work_size, 0, NULL, NULL);
+	if (err != CL_SUCCESS) {
+		printf("Error queuing kernel for execution.\n");
+		exit(-1);
+	}
+	// Считывание выходного буфера обратно на хост
+	size_t origin[3] = { 0, 0, 0 };
+	size_t region[3] = { width, height, 1 };
+	err = clEnqueueReadImage(commandQueue, clOutputImage, CL_TRUE, origin, region, 0, 0, buffer, 0, NULL, NULL);
+	if (err != CL_SUCCESS) {
+		printf("Error reading result buffer.\n");
+		exit(-1);
+	}
+	// Сохраняем результат
+	CreateImageFromBuffer((BYTE*)buffer, width, height);
+	/*/////////////////////////////////////////////////////////////
+	//////// Освобождение Добби (всех выделенных ресурсов) ////////
+	/////////////////////////////////////////////////////////////*/
+	clReleaseKernel(gaussian_kernel);
+	clReleaseProgram(program);
+	clReleaseSampler(sampler);
+	clReleaseCommandQueue(commandQueue);
+	clReleaseContext(context);
+	delete[] devices;
+	clReleaseDevice(device);
+	delete[] platforms;
+	delete[] str;
+	delete[] buffer;
+
+
+	// Пусть сторонний пример будет здесь
+	/*width = 800, height = 600;
+	std::vector<unsigned char> buf(width* height * 4);
+	for (int i = 0; i < width * height; i++) {
+		buf[i * 4 + 0] = 255;
+		buf[i * 4 + 1] = 0;
+		buf[i * 4 + 2] = 0;
+		buf[i * 4 + 3] = 255;
+	}
+	CreateImageFromBuffer(buf.data(), width, height);*/
 }
