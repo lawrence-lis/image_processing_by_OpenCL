@@ -2,7 +2,18 @@
 #include <iostream>
 #include "WorkingWithImages.h"
 
-
+char* CreateBufferFromImage(const char* src_file_name, unsigned int& width, unsigned int& height)
+{
+	FREE_IMAGE_FORMAT format = FreeImage_GetFileType(src_file_name, 0);
+	FIBITMAP* image = FreeImage_Load(format, src_file_name);
+	image = FreeImage_ConvertTo32Bits(image);
+	width = FreeImage_GetWidth(image);
+	height = FreeImage_GetHeight(image);
+	char* res = new char[width * height * 4];
+	memcpy(res, FreeImage_GetBits(image), width * height * 4);
+	FreeImage_Unload(image);
+	return res;
+}
 
 void CreateImageFromBuffer(const char* src_file_name, const unsigned char* buffer, unsigned width, unsigned height, const char* dst_str_name)
 {

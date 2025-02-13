@@ -10,3 +10,6 @@ void CreateImageFromBuffer(const char* src_file_name, const unsigned char* buffe
 * вернЄт значение NULL. ѕрисвоение нулевого значени€ таким функци€м, как Уprintf(...)Ф, может привести к сбою 
 * вашего приложени€, поэтому просто будь осторожен Е */
 void FreeImageErrorHandler(FREE_IMAGE_FORMAT fif, const char* message);
+
+/* ‘ункци€ дл€ создани€ буфера из изображени€. */
+char* CreateBufferFromImage(const char* src_file_name, unsigned int& width, unsigned int& height);

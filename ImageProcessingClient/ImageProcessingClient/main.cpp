@@ -22,14 +22,9 @@ int main(void)
 	///////// Настройка среды для работы с изображениями //////////
 	/////////////////////////////////////////////////////////////*/
 	const char* fileName = "cat.jpg";
-	FREE_IMAGE_FORMAT format = FreeImage_GetFileType(fileName, 0);
-	FIBITMAP* image = FreeImage_Load(format, fileName);
-	image = FreeImage_ConvertTo32Bits(image);
-	auto width = FreeImage_GetWidth(image);
-	auto height = FreeImage_GetHeight(image);
-	char* buffer = new char[width * height * 4];
-	memcpy(buffer, FreeImage_GetBits(image), width * height * 4);
-	FreeImage_Unload(image);
+	unsigned int width, height;
+	char* buffer = CreateBufferFromImage(fileName, width, height);
+
 	cl_image_format clImageFormat;
 	clImageFormat.image_channel_order = CL_RGBA;
 	clImageFormat.image_channel_data_type = CL_UNORM_INT8;
