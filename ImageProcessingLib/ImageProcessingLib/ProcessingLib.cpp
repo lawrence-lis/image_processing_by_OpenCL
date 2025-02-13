@@ -5,41 +5,13 @@
 
 ///////////////////////////////////////////// Платформы /////////////////////////////////////////////
 
-cl_uint ipGetCountPlatforms()
-{
-	// Функция для подсчёта количества доступных платформ
-	cl_uint res;
-	switch (clGetPlatformIDs(0, NULL, &res))
-	{
-	case CL_SUCCESS:
-		// Подсчёт произошёл успешно, ничего выводить не нужно, просто вернуть посчитанное значение
-		return res;
-	case CL_INVALID_VALUE:
-		// Выпадает если в качестве последних двух параметров функции clGetPlatformIDs передали NULL, либо если в качестве количества доступных платформ передали 0, а в качестве платформ передали 
-		// ненулевой указатель. Вывести сообщение о неправильности передаваемых параметров и вернуть код ошибки, который, возможно, будет внесён и классифицирован намного позже. По идее, от пользователя
-		// тут ничего не зависит, и если выпадает имеено эта ветка, то либо происходит тестирование, либо что-то не так с компьютером пользователя, либо разработчик что-то напутал и не тестировал то, 
-		// что разработал.
-		printf("Error counting available platforms.\n");
-		return -101;
-	case CL_OUT_OF_HOST_MEMORY:
-		// Ошибка: Не удается выделить на хосте ресурсы, необходимые для реализации OpenCL. Вывести соответствующее сообщение и вернуть код ошибки, который, возможно, будет внесён и классифицирован 
-		// намного позже. По идее, эта ошибка может вылезти только из-за неисправности самого хоста.
-		printf("Error: Unable to allocate resources required by the OpenCL implementation on the host.\n");
-		return -102;
-	default:
-		// Ничто из вышеперечисленного, вывестина экран сообщение о неизвестной ошибке и вернуть код ошибки, который, возможно, будет внесён и классифицирован намного позже
-		printf("WARNING: unknown error when calculating the number of available platforms\n");
-		return -103;
-	}
-}
-
 cl_platform_id* ipGetArrPlatforms(cl_uint count)
 {
 	cl_uint subCount = count;		// Ввёл для обработки случая с нулём в качестве аргумента функции
 	cl_platform_id* res;
 	if (count == 0)
 	{
-		subCount = ipGetCountPlatforms();
+		subCount = cl_init_get_num_platforms();
 		res = new cl_platform_id[subCount];
 	}
 	else res = new cl_platform_id[subCount];
@@ -72,7 +44,7 @@ void ipGetInfoAboutPlatform(cl_platform_id platform, cl_platform_info info_type,
 void ipGetInfoAboutAvailablePlatforms()
 {
 	// 1-й вызов: для определения количества доступных платформ
-	cl_uint count_platforms = ipGetCountPlatforms();
+	cl_uint count_platforms = cl_init_get_num_platforms();
 	printf("Number of available platforms: %d\n\n", count_platforms);
 	// Выделение памяти под заданное число идентификаторов
 	cl_platform_id* platforms = ipGetArrPlatforms(count_platforms);
@@ -189,7 +161,7 @@ void ipGetAllInfoAboutSelectedDevices(cl_device_id device)
 
 void ipGetInfoAboutAvailableDevices()
 {
-	cl_uint count_platforms = ipGetCountPlatforms(), count_devices;
+	cl_uint count_platforms = cl_init_get_num_platforms(), count_devices;
 	printf("Number of available platforms: %d\n\n", count_platforms);
 	cl_platform_id* platforms = ipGetArrPlatforms(count_platforms);
 	size_t size;

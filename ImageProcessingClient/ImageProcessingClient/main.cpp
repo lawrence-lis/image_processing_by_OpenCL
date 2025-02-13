@@ -4,7 +4,7 @@
 // Если начнёт выёбываться на определение функций, то сотри и заново вставь следующую строку
 #include "ProcessingLib.h"
 #include "CL/cl.hpp"
-#include "FreeImage.h"
+#include "WorkingWithImages.h"
 
 size_t RoundUp(size_t group_size, cl_int global_size)
 {
@@ -16,32 +16,6 @@ size_t RoundUp(size_t group_size, cl_int global_size)
 		return global_size + group_size - r;
 }
 
-void CreateImageFromBuffer(const unsigned char* buffer, unsigned width, unsigned height)
-{
-	FreeImage_Initialise();
-	FIBITMAP* bitmap = FreeImage_Allocate(width, height, 32);
-	if (!bitmap) {
-		printf("Error creating image.\n");
-		FreeImage_DeInitialise();
-		return;
-	}
-	BYTE* bits = FreeImage_GetBits(bitmap);
-	for (int y = 0; y < height; y++) {
-		for (int x = 0; x < width; x++) {
-			int srcIdx = (y * width + x) * 4;
-			int destIdx = (y) * width * 4 + x * 4;
-
-			bits[destIdx + 0] = buffer[srcIdx + 2];
-			bits[destIdx + 1] = buffer[srcIdx + 1];
-			bits[destIdx + 2] = buffer[srcIdx + 0];
-			bits[destIdx + 3] = buffer[srcIdx + 3];
-		}
-	}
-	FreeImage_Save(FIF_PNG, bitmap, "output.png", 0);
-	FreeImage_Unload(bitmap);
-	FreeImage_DeInitialise();
-}
-
 int main(void)
 {
 	/*/////////////////////////////////////////////////////////////
@@ -50,9 +24,7 @@ int main(void)
 	const char* fileName = "cat.jpg";
 	FREE_IMAGE_FORMAT format = FreeImage_GetFileType(fileName, 0);
 	FIBITMAP* image = FreeImage_Load(format, fileName);
-	FIBITMAP* temp = image;
 	image = FreeImage_ConvertTo32Bits(image);
-	FreeImage_Unload(temp);
 	auto width = FreeImage_GetWidth(image);
 	auto height = FreeImage_GetHeight(image);
 	char* buffer = new char[width * height * 4];
@@ -72,12 +44,8 @@ int main(void)
 	cl_device_id device;
 	cl_program program;
 	// Подсчёт платформ
-	err = clGetPlatformIDs(0, NULL, &num_platforms);
-	if (err != CL_SUCCESS) {
-		printf("Error to counting available platforms.\n");
-		exit(-1);
-	}
-	else printf("%d available platform(s).\n", num_platforms);
+	num_platforms = cl_init_get_num_platforms();
+	printf("Available platform(s): %d\n", num_platforms);
 	// Выделение массива платформ
 	cl_platform_id* platforms = new cl_platform_id[num_platforms];
 	err = clGetPlatformIDs(num_platforms, platforms, NULL);
@@ -224,7 +192,7 @@ int main(void)
 		exit(-1);
 	}
 	// Сохраняем результат
-	CreateImageFromBuffer((BYTE*)buffer, width, height);
+	CreateImageFromBuffer(fileName, (BYTE*)buffer, width, height);
 	/*/////////////////////////////////////////////////////////////
 	//////// Освобождение Добби (всех выделенных ресурсов) ////////
 	/////////////////////////////////////////////////////////////*/
@@ -244,9 +212,9 @@ int main(void)
 	/*width = 800, height = 600;
 	std::vector<unsigned char> buf(width* height * 4);
 	for (int i = 0; i < width * height; i++) {
-		buf[i * 4 + 0] = 255;
+		buf[i * 4 + 0] = 0;
 		buf[i * 4 + 1] = 0;
-		buf[i * 4 + 2] = 0;
+		buf[i * 4 + 2] = 255;
 		buf[i * 4 + 3] = 255;
 	}
 	CreateImageFromBuffer(buf.data(), width, height);*/

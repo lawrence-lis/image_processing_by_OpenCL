@@ -8,7 +8,7 @@ __kernel void gaussian_filter(	__read_only image2d_t srcImg,
 		2 4 2
 		1 2 1 */
 	float kernelWeights[9] = {	1.0f, 2.0f, 1.0f,
-								2.0f, 16.0f, 2.0f,
+								2.0f, 4.0f, 2.0f,
 								1.0f, 2.0f, 1.0f};
 	int2 startImageCoord = (int2) (get_global_id(0) - 1, get_global_id(1) - 1);
 	int2 endImageCoord = (int2) (get_global_id(0) + 1, get_global_id(1) + 1);
