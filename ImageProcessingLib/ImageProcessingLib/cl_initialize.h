@@ -21,7 +21,7 @@
 // Функция, возвращаяющая количество доступных платформ
 extern "C" PROCESSINGLIBRARY_API cl_uint cl_init_get_num_platforms();
 
-/* Функция, возвращаяет массив доступных платформ
+/* Функция, возвращающая массив доступных платформ
 	Параметры:
 	  * count - количество доступных платформ (предполагается, что данное число предопределено до вызова данной функции, в противном случае функция посчитает её самостоятельно)*/
 extern "C" PROCESSINGLIBRARY_API cl_platform_id * cl_init_get_array_platforms(cl_uint count = cl_init_get_num_platforms());

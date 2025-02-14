@@ -5,26 +5,12 @@
 
 ///////////////////////////////////////////// Платформы /////////////////////////////////////////////
 
-cl_platform_id* ipGetArrPlatforms(cl_uint count)
-{
-	cl_uint subCount = count;		// Ввёл для обработки случая с нулём в качестве аргумента функции
-	cl_platform_id* res;
-	if (count == 0)
-	{
-		subCount = cl_init_get_num_platforms();
-		res = new cl_platform_id[subCount];
-	}
-	else res = new cl_platform_id[subCount];
-	cl_uint status = clGetPlatformIDs(subCount, res, NULL);
-	return res;
-}
-
 cl_platform_id ipGetPlatformByIndex(cl_platform_id* platforms, cl_uint count, int idx)
 {
 	cl_platform_id res;
 	if (platforms == NULL)
 	{
-		cl_platform_id* subArrPlatforms = ipGetArrPlatforms(count);
+		cl_platform_id* subArrPlatforms = cl_init_get_array_platforms(count);
 		res = subArrPlatforms[0];
 		delete[] subArrPlatforms;
 	}
@@ -47,7 +33,7 @@ void ipGetInfoAboutAvailablePlatforms()
 	cl_uint count_platforms = cl_init_get_num_platforms();
 	printf("Number of available platforms: %d\n\n", count_platforms);
 	// Выделение памяти под заданное число идентификаторов
-	cl_platform_id* platforms = ipGetArrPlatforms(count_platforms);
+	cl_platform_id* platforms = cl_init_get_array_platforms(count_platforms);
 	size_t size;
 	for (cl_uint i = 0; i < count_platforms; i++)
 	{
@@ -163,7 +149,7 @@ void ipGetInfoAboutAvailableDevices()
 {
 	cl_uint count_platforms = cl_init_get_num_platforms(), count_devices;
 	printf("Number of available platforms: %d\n\n", count_platforms);
-	cl_platform_id* platforms = ipGetArrPlatforms(count_platforms);
+	cl_platform_id* platforms = cl_init_get_array_platforms(count_platforms);
 	size_t size;
 	for (cl_uint i = 0; i < count_platforms; i++)
 	{

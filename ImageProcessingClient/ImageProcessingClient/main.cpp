@@ -42,12 +42,7 @@ int main(void)
 	num_platforms = cl_init_get_num_platforms();
 	printf("Available platform(s): %d\n", num_platforms);
 	// Выделение массива платформ
-	cl_platform_id* platforms = new cl_platform_id[num_platforms];
-	err = clGetPlatformIDs(num_platforms, platforms, NULL);
-	if (err != CL_SUCCESS) {
-		printf("Error to allocate platforms array.\n");
-		exit(-1);
-	}
+	cl_platform_id* platforms = cl_init_get_array_platforms(num_platforms);
 	platform = platforms[0];
 	clGetPlatformInfo(platform, CL_PLATFORM_NAME, 0, NULL, &str_size);
 	str = new char[str_size];
@@ -198,7 +193,7 @@ int main(void)
 	clReleaseContext(context);
 	delete[] devices;
 	clReleaseDevice(device);
-	delete[] platforms;
+	free(platforms);
 	delete[] str;
 	delete[] buffer;
 
