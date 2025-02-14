@@ -23,3 +23,4 @@ cl_uint cl_init_get_num_platforms()
 		return 0;
 	}
 }
+
