@@ -25,3 +25,11 @@ extern "C" PROCESSINGLIBRARY_API cl_uint cl_init_get_num_platforms();
 	Параметры:
 	  * count - количество доступных платформ (предполагается, что данное число предопределено до вызова данной функции, в противном случае функция посчитает её самостоятельно)*/
 extern "C" PROCESSINGLIBRARY_API cl_platform_id * cl_init_get_array_platforms(cl_uint count = cl_init_get_num_platforms());
+
+/* Функция, отображающая информацию о переданной платформе
+	Параметры:
+	 * platform - идентификатор платформы, информацию о которой надо отобразить
+	 * info_type - тип отображаемой информации
+	 * p_s - адрес переменной размера отображаемой информации
+	 * title - строка, поясняющая, что это за информация, которую выводит данна функция*/
+extern "C" PROCESSINGLIBRARY_API void cl_init_platform_get_info(cl_platform_id platform, cl_platform_info info_type, size_t & p_s, const char* title);

@@ -65,3 +65,67 @@ cl_platform_id* cl_init_get_array_platforms(cl_uint count)
 		return NULL;
 	}
 }
+
+// Функция, отображающая информацию о переданной платформе
+void cl_init_platform_get_info(cl_platform_id platform, cl_platform_info info_type, size_t& p_s, const char* title)
+{
+	// Сперва посчитаем количество символов, необходимых для записи нужной информации
+	switch (clGetPlatformInfo(platform, info_type, 0, NULL, &p_s))
+	{
+	case CL_SUCCESS:
+		// Функция clGetPlatformInfo выполнена успешно, количество памяти, необходимой для нужной информации, посчитано. Нужно просто вернуться к выполнению функции.
+		break;
+	case CL_INVALID_PLATFORM:
+		// Выподает если переданная платформа не является доступной платформой. Вывести соответствующее сообщение и вернуть управление.
+		printf("The transferred platform is not a valid platform\n\tProblem area: the \"cl_init_platform_get_info\" function\n\n");
+		return;
+	case CL_INVALID_VALUE:
+		// По идее на данном может выпасть если переданный тип получаемой информации не является одним из поддерживаемых значений. Вывести соответствующее сообщение и вернуть управление.
+		printf("The transmitted type of information received is not one of the supported values\n\tProblem area: the \"cl_init_platform_get_info\" function\n\n");
+		return;
+	case CL_OUT_OF_HOST_MEMORY:
+		// Выподает если происходит сбой в распределении ресурсов, требуемых реализацией OpenCL на хосте. Вывести соответствующее сообщение и вернуть управление.
+		printf("There was a failure in the allocation of resources required by the OpenCL implementation on the host\n\tProblem area: the \"cl_init_platform_get_info\" function\n\n");
+		return;
+	default:
+		// Прроизошло что-то непонятное, но подсчёт выделяемой информации не завершился успешно. Вывести соответствующее сообщение и вернуть управление.
+		printf("Unknown error\n\tProblem area: the \"cl_init_platform_get_info\" function\n\n");
+		return;
+	}
+	// Выделяем память для хранения запрашиваемой информации
+	char* str = (char*)malloc(sizeof(char) * p_s);
+	if (str == NULL) {
+		printf("Memory allocation error for platform IDs\n\tProblem area: the \"cl_init_get_array_platforms\" function.\n\n");
+		return;
+	}
+	// Получаем и выводим запрашиваемую информацию
+	switch (clGetPlatformInfo(platform, info_type, p_s, str, NULL))
+	{
+	case CL_SUCCESS:
+		// Функция clGetPlatformInfo выполнена успешно, информация считана в переменную. Нужно вывести на экран считанную информацию и вернуться к выполнению функции (там осталось только освобождение 
+		// память, выделенной под строку с информацией).
+		printf("\t%s: %s\n", title, str);
+		break;
+	case CL_INVALID_PLATFORM:
+		// Выподает если переданная платформа (первый параметр функции) не является доступной платформой. Вывести соответствующее сообщение и вернуть управление.
+		printf("The transferred platform is not a valid platform\n\tProblem area: the \"cl_init_platform_get_info\" function\n\n");
+		break;
+	case CL_INVALID_VALUE:
+		// Выпадает если переданный тип информации, указанный в параметре info_type, не является одним из поддерживаемых значений или если размер в байтах, указанный в параметре p_s, меньше размера
+		// возвращаемого типа, указанного в таблице запросов платформы, а значение указателя на ячейку памяти, переаднный в параметре str не равно NULL. Вывести соответствующее сообщение и вернуть 
+		// управление.
+		printf("The transmitted type of information specified in the info_type parameter is not one of the supported values, or if the size in bytes specified in the p_s parameter is less than the ");
+		printf("size of the returned type specified in the platform query table, and the value of the pointer to the memory cell redirected in the str parameter is not NULL");
+		printf("\n\tProblem area : the \"cl_init_platform_get_info\" function\n\n");
+		break;
+	case CL_OUT_OF_HOST_MEMORY:
+		// Выподает если происходит сбой в распределении ресурсов, требуемых реализацией OpenCL на хосте (так написано в спецификации). Вывести соответствующее сообщение и вернуть управление.
+		printf("There was a failure in the allocation of resources required by the OpenCL implementation on the host\n\tProblem area: the \"cl_init_platform_get_info\" function\n\n");
+		break;
+	default:
+		// Прроизошло что-то непонятное, но подсчёт выделяемой информации не завершился успешно. Вывести соответствующее сообщение и вернуть управление.
+		printf("Unknown error\n\tProblem area: the \"cl_init_platform_get_info\" function\n\n");
+		break;
+	}
+	free(str);
+}

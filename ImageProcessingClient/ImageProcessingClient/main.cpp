@@ -44,6 +44,7 @@ int main(void)
 	// Выделение массива платформ
 	cl_platform_id* platforms = cl_init_get_array_platforms(num_platforms);
 	platform = platforms[0];
+	cl_init_platform_get_info(platform, CL_PLATFORM_NAME, str_size, "Name");
 	clGetPlatformInfo(platform, CL_PLATFORM_NAME, 0, NULL, &str_size);
 	str = new char[str_size];
 	clGetPlatformInfo(platform, CL_PLATFORM_NAME, str_size, str, NULL);
