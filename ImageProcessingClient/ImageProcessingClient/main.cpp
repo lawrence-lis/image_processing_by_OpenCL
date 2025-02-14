@@ -196,16 +196,4 @@ int main(void)
 	free(platforms);
 	delete[] str;
 	delete[] buffer;
-
-
-	// Пусть сторонний пример будет здесь
-	/*width = 800, height = 600;
-	std::vector<unsigned char> buf(width* height * 4);
-	for (int i = 0; i < width * height; i++) {
-		buf[i * 4 + 0] = 0;
-		buf[i * 4 + 1] = 0;
-		buf[i * 4 + 2] = 255;
-		buf[i * 4 + 3] = 255;
-	}
-	CreateImageFromBuffer(buf.data(), width, height);*/
 }

@@ -5,19 +5,6 @@
 
 ///////////////////////////////////////////// Платформы /////////////////////////////////////////////
 
-cl_platform_id ipGetPlatformByIndex(cl_platform_id* platforms, cl_uint count, int idx)
-{
-	cl_platform_id res;
-	if (platforms == NULL)
-	{
-		cl_platform_id* subArrPlatforms = cl_init_get_array_platforms(count);
-		res = subArrPlatforms[0];
-		delete[] subArrPlatforms;
-	}
-	else res = platforms[idx];
-	return res;
-}
-
 void ipGetInfoAboutPlatform(cl_platform_id platform, cl_platform_info info_type, size_t& p_s, const char* title)
 {
 	cl_uint status = clGetPlatformInfo(platform, info_type, 0, NULL, &p_s);
@@ -59,10 +46,12 @@ cl_uint ipGetCountDevices(cl_platform_id platform, cl_device_info device_type)
 	cl_uint res, status;
 	if (platform == NULL)
 	{
-		cl_platform_id subPlatform = ipGetPlatformByIndex(NULL, 0, NULL);
+		cl_platform_id* platforms = cl_init_get_array_platforms();
+		cl_platform_id subPlatform = platforms[0];
 		if (device_type == NULL)
 			status = clGetDeviceIDs(subPlatform, CL_DEVICE_TYPE_ALL, 0, NULL, &res);
 		else status = clGetDeviceIDs(subPlatform, device_type, 0, NULL, &res);
+		free(platforms);
 	}
 	else if (device_type == NULL) status = clGetDeviceIDs(platform, CL_DEVICE_TYPE_ALL, 0, NULL, &res);
 	else status = clGetDeviceIDs(platform, device_type, 0, NULL, &res);
@@ -81,7 +70,8 @@ cl_device_id* ipGetArrDevices(cl_platform_id platform, cl_device_info device_typ
 		if (platform == NULL)
 		{
 			// Если не была передана платформа, то происходит поиск доступных платформ и выбор первой попавшейся
-			subPlatform = ipGetPlatformByIndex(NULL, 0, NULL);
+			cl_platform_id* platforms = cl_init_get_array_platforms();
+			subPlatform = platforms[0];
 			if (device_type == NULL)
 			{
 				// Если не был передан тип устройств, то идёт перерасчёт всех доступных устройств всех доступных типов для перевыбранной платформой
