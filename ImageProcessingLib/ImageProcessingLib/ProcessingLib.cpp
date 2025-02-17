@@ -55,6 +55,21 @@ void cl_display_platform_info_default(cl_platform_id platform)
 	cl_init_platform_get_info(platform, CL_PLATFORM_PROFILE, "Profile");
 }
 
+// Функция, отображающая всю доступную информацию (имя, версию, производителя, профиль и расширения) о переданной платформе
+void cl_display_platform_info_all(cl_platform_id platform)
+{
+	// Проверка платформы
+	if (platform == NULL) {
+		printf("The wrong platform was transmitted\n\tProblem area: the \"cl_display_platform_info_default\" function.\n\n");
+		return;
+	}
+	cl_init_platform_get_info(platform, CL_PLATFORM_NAME, "Name");
+	cl_init_platform_get_info(platform, CL_PLATFORM_VERSION, "Version");
+	cl_init_platform_get_info(platform, CL_PLATFORM_VENDOR, "Vendor");
+	cl_init_platform_get_info(platform, CL_PLATFORM_PROFILE, "Profile");
+	cl_init_platform_get_info(platform, CL_PLATFORM_EXTENSIONS, "Extensions");
+}
+
 ///////////////////////////////////////////// Устройства /////////////////////////////////////////////
 
 cl_uint ipGetCountDevices(cl_platform_id platform, cl_device_info device_type)
