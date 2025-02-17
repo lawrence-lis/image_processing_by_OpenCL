@@ -25,6 +25,11 @@ extern "C" PROCESSINGLIBRARY_API void ipGetInfoAboutAvailablePlatforms();
 		* platform - идентификатор платформы, информацию о которой надо отобразить*/
 extern "C" PROCESSINGLIBRARY_API void cl_display_platform_info_minimum(cl_platform_id platform);
 
+/* Функция, отображающая информацию по-умолчанию (имя, версию и профиль) о переданной платформе
+	Параметры:
+		* platform - идентификатор платформы, информацию о которой надо отобразить*/
+extern "C" PROCESSINGLIBRARY_API void cl_display_platform_info_default(cl_platform_id platform);
+
 
 ///////////////////////////////////////////// Устройства /////////////////////////////////////////////
 
