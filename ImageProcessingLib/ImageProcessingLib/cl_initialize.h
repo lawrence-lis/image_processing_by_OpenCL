@@ -32,4 +32,4 @@ extern "C" PROCESSINGLIBRARY_API cl_platform_id * cl_init_get_array_platforms(cl
 	 * info_type - тип отображаемой информации
 	 * p_s - адрес переменной размера отображаемой информации
 	 * title - строка, по€сн€юща€, что это за информаци€, которую выводит данна функци€*/
-extern "C" PROCESSINGLIBRARY_API void cl_init_platform_get_info(cl_platform_id platform, cl_platform_info info_type, size_t & p_s, const char* title);
+extern "C" PROCESSINGLIBRARY_API void cl_init_platform_get_info(cl_platform_id platform, cl_platform_info info_type, const char* title);

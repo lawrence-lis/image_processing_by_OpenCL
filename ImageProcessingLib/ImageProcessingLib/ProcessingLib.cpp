@@ -17,17 +17,28 @@ void ipGetInfoAboutAvailablePlatforms()
 	{
 		printf("Platform[%d]:\n", i);
 		// Определение и вывод профиля платформы (что бы это ни значило)
-		cl_init_platform_get_info(platforms[i], CL_PLATFORM_PROFILE, size, "Profile");
+		cl_init_platform_get_info(platforms[i], CL_PLATFORM_PROFILE, "Profile");
 		// Определение и вывод имени платформы
-		cl_init_platform_get_info(platforms[i], CL_PLATFORM_NAME, size, "Name");
+		cl_init_platform_get_info(platforms[i], CL_PLATFORM_NAME, "Name");
 		// Определение и вывод номер версии платформы
-		cl_init_platform_get_info(platforms[i], CL_PLATFORM_VERSION, size, "Version");
+		cl_init_platform_get_info(platforms[i], CL_PLATFORM_VERSION, "Version");
 		// Определение и вывод доступные расширения платформы
-		cl_init_platform_get_info(platforms[i], CL_PLATFORM_EXTENSIONS, size, "Extensions");
+		cl_init_platform_get_info(platforms[i], CL_PLATFORM_EXTENSIONS, "Extensions");
 		printf("\n");
 	}
 	printf("\n");
 	free(platforms);
+}
+
+void cl_display_platform_info_minimum(cl_platform_id platform)
+{
+	// Проверка платформы
+	if (platform == NULL) {
+		printf("The wrong platform was transmitted\n\tProblem area: the \"cl_display_platform_info_minimum\" function.\n\n");
+		return;
+	}
+	cl_init_platform_get_info(platform, CL_PLATFORM_NAME, "Name");
+	cl_init_platform_get_info(platform, CL_PLATFORM_VERSION, "Version");
 }
 
 ///////////////////////////////////////////// Устройства /////////////////////////////////////////////
@@ -136,13 +147,13 @@ void ipGetInfoAboutAvailableDevices()
 	{
 		printf("Platform[%d]:\n", i);
 		// Определение и вывод профиля платформы
-		cl_init_platform_get_info(platforms[i], CL_PLATFORM_PROFILE, size, "Profile");
+		cl_init_platform_get_info(platforms[i], CL_PLATFORM_PROFILE, "Profile");
 		// Определение и вывод имени платформы
-		cl_init_platform_get_info(platforms[i], CL_PLATFORM_NAME, size, "Name");
+		cl_init_platform_get_info(platforms[i], CL_PLATFORM_NAME, "Name");
 		// Определение и вывод номер версии платформы
-		cl_init_platform_get_info(platforms[i], CL_PLATFORM_VERSION, size, "Version");
+		cl_init_platform_get_info(platforms[i], CL_PLATFORM_VERSION, "Version");
 		// Определение и вывод доступные расширения платформы
-		cl_init_platform_get_info(platforms[i], CL_PLATFORM_EXTENSIONS, size, "Extensions");
+		cl_init_platform_get_info(platforms[i], CL_PLATFORM_EXTENSIONS, "Extensions");
 		printf("---------------------------------------------------------------------------\n");
 		count_devices = ipGetCountDevices(platforms[i], CL_DEVICE_TYPE_ALL);
 		printf("Number of available devices: %d\n\n", count_devices);

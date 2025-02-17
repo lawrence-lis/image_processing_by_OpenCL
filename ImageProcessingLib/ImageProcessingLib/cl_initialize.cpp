@@ -67,8 +67,9 @@ cl_platform_id* cl_init_get_array_platforms(cl_uint count)
 }
 
 // Функция, отображающая информацию о переданной платформе
-void cl_init_platform_get_info(cl_platform_id platform, cl_platform_info info_type, size_t& p_s, const char* title)
+void cl_init_platform_get_info(cl_platform_id platform, cl_platform_info info_type, const char* title)
 {
+	size_t p_s;
 	// Сперва посчитаем количество символов, необходимых для записи нужной информации
 	switch (clGetPlatformInfo(platform, info_type, 0, NULL, &p_s))
 	{
