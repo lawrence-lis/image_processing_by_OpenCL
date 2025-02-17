@@ -17,9 +17,6 @@
 
 ///////////////////////////////////////////// Платформы /////////////////////////////////////////////
 
-// Функция, отображающая информацио обо всех доступных платформах
-extern "C" PROCESSINGLIBRARY_API void ipGetInfoAboutAvailablePlatforms();
-
 /* Функция, отображающая минимальную информацию (имя и версию) о переданной платформе
 	Параметры:
 		* platform - идентификатор платформы, информацию о которой надо отобразить*/
@@ -34,6 +31,24 @@ extern "C" PROCESSINGLIBRARY_API void cl_display_platform_info_default(cl_platfo
 	Параметры:
 		* platform - идентификатор платформы, информацию о которой надо отобразить*/
 extern "C" PROCESSINGLIBRARY_API void cl_display_platform_info_all(cl_platform_id platform);
+
+/* Функция, отображающая минимальную информацию (имя и версию) о переданных платформах
+	Параметры:
+		* platforms - указатель на массив идентификаторов платформ, информацию о которых надо отобразить
+		* platforms_count - количество элементов в переданном массиве platforms*/
+extern "C" PROCESSINGLIBRARY_API void cl_display_arr_platforms_info_minimum(cl_platform_id* platforms, cl_uint platforms_count = cl_init_get_num_platforms());
+
+/* Функция, отображающая информацию по-умолчанию (имя, версию и профиль) о переданных платформах
+	Параметры:
+		* platforms - указатель на массив идентификаторов платформ, информацию о которых надо отобразить
+		* platforms_count - количество элементов в переданном массиве platforms*/
+extern "C" PROCESSINGLIBRARY_API void cl_display_arr_platforms_info_default(cl_platform_id * platforms, cl_uint platforms_count = cl_init_get_num_platforms());
+
+/* Функция, отображающая всю доступную информацию (имя, версию, производителя, профиль и расширения) о переданных платформах
+	Параметры:
+		* platforms - указатель на массив идентификаторов платформ, информацию о которых надо отобразить
+		* platforms_count - количество элементов в переданном массиве platforms*/
+extern "C" PROCESSINGLIBRARY_API void cl_display_arr_platforms_info_all(cl_platform_id * platforms, cl_uint platforms_count = cl_init_get_num_platforms());
 
 
 ///////////////////////////////////////////// Устройства /////////////////////////////////////////////

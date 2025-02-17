@@ -43,23 +43,20 @@ int main(void)
 	printf("Available platform(s): %d\n", num_platforms);
 	// Выделение массива платформ
 	cl_platform_id* platforms = cl_init_get_array_platforms(num_platforms);
+	cl_display_arr_platforms_info_default(platforms, num_platforms);
 	platform = platforms[0];
-	cl_display_platform_info_all(platform);
-	clGetPlatformInfo(platform, CL_PLATFORM_NAME, 0, NULL, &str_size);
-	str = new char[str_size];
-	clGetPlatformInfo(platform, CL_PLATFORM_NAME, str_size, str, NULL);
 	// Подсчёт устройств
 	err = clGetDeviceIDs(platform, CL_DEVICE_TYPE_GPU, 0, NULL, &num_devices);
 	if (err != CL_SUCCESS) {
-		printf("Error to counting available devices to %s platform.\n", str);
+		printf("Error to counting available devices to platform.\n");
 		exit(-1);
 	}
-	else printf("%d available device(s) to %s platform.\n", num_platforms, str);
+	else printf("%d available device(s) to platform.\n", num_platforms);
 	// Выделение массива устройств
 	cl_device_id* devices = new cl_device_id[num_devices];
 	err = clGetDeviceIDs(platform, CL_DEVICE_TYPE_GPU, num_devices, devices, NULL);
 	if (err != CL_SUCCESS) {
-		printf("Error to allocate available to %s platform devices array.\n", str);
+		printf("Error to allocate available to platform devices array.\n");
 		exit(-1);
 	}
 	device = devices[0];

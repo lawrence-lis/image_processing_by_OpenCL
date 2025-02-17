@@ -5,31 +5,6 @@
 
 ///////////////////////////////////////////// Платформы /////////////////////////////////////////////
 
-void ipGetInfoAboutAvailablePlatforms()
-{
-	// 1-й вызов: для определения количества доступных платформ
-	cl_uint count_platforms = cl_init_get_num_platforms();
-	printf("Number of available platforms: %d\n\n", count_platforms);
-	// Выделение памяти под заданное число идентификаторов
-	cl_platform_id* platforms = cl_init_get_array_platforms(count_platforms);
-	size_t size;
-	for (cl_uint i = 0; i < count_platforms; i++)
-	{
-		printf("Platform[%d]:\n", i);
-		// Определение и вывод профиля платформы (что бы это ни значило)
-		cl_init_platform_get_info(platforms[i], CL_PLATFORM_PROFILE, "Profile");
-		// Определение и вывод имени платформы
-		cl_init_platform_get_info(platforms[i], CL_PLATFORM_NAME, "Name");
-		// Определение и вывод номер версии платформы
-		cl_init_platform_get_info(platforms[i], CL_PLATFORM_VERSION, "Version");
-		// Определение и вывод доступные расширения платформы
-		cl_init_platform_get_info(platforms[i], CL_PLATFORM_EXTENSIONS, "Extensions");
-		printf("\n");
-	}
-	printf("\n");
-	free(platforms);
-}
-
 // Функция, отображающая минимальную информацию (имя и версию) о переданной платформе
 void cl_display_platform_info_minimum(cl_platform_id platform)
 {
@@ -60,7 +35,7 @@ void cl_display_platform_info_all(cl_platform_id platform)
 {
 	// Проверка платформы
 	if (platform == NULL) {
-		printf("The wrong platform was transmitted\n\tProblem area: the \"cl_display_platform_info_default\" function.\n\n");
+		printf("The wrong platform was transmitted\n\tProblem area: the \"cl_display_platform_info_all\" function.\n\n");
 		return;
 	}
 	cl_init_platform_get_info(platform, CL_PLATFORM_NAME, "Name");
@@ -68,6 +43,61 @@ void cl_display_platform_info_all(cl_platform_id platform)
 	cl_init_platform_get_info(platform, CL_PLATFORM_VENDOR, "Vendor");
 	cl_init_platform_get_info(platform, CL_PLATFORM_PROFILE, "Profile");
 	cl_init_platform_get_info(platform, CL_PLATFORM_EXTENSIONS, "Extensions");
+}
+
+// Функция, отображающая минимальную информацию (имя и версию) о переданных платформах
+void cl_display_arr_platforms_info_minimum(cl_platform_id* platforms, cl_uint platforms_count)
+{
+	// Проверка платформы
+	if (platforms == NULL) {
+		printf("The wrong platforms was transmitted\n\tProblem area: the \"cl_display_arr_platforms_info_minimum\" function.\n\n");
+		return;
+	}
+	printf("Number of transferred platforms: %d\n", platforms_count);
+	for (int i = 0; i < platforms_count; i++) {
+		printf("[%d]:", i);
+		cl_init_platform_get_info(platforms[i], CL_PLATFORM_NAME, "Name");
+		cl_init_platform_get_info(platforms[i], CL_PLATFORM_VERSION, "Version");
+		printf("\n");
+	}
+}
+
+// Функция, отображающая информацию по-умолчанию (имя, версию и профиль) о переданных платформах
+void cl_display_arr_platforms_info_default(cl_platform_id* platforms, cl_uint platforms_count)
+{
+	// Проверка платформы
+	if (platforms == NULL) {
+		printf("The wrong platforms was transmitted\n\tProblem area: the \"cl_display_arr_platforms_info_default\" function.\n\n");
+		return;
+	}
+	printf("Number of transferred platforms: %d\n", platforms_count);
+	for (int i = 0; i < platforms_count; i++) {
+		printf("[%d]:", i);
+		cl_init_platform_get_info(platforms[i], CL_PLATFORM_NAME, "Name");
+		cl_init_platform_get_info(platforms[i], CL_PLATFORM_VERSION, "Version");
+		cl_init_platform_get_info(platforms[i], CL_PLATFORM_PROFILE, "Profile");
+		printf("\n");
+	}
+}
+
+// Функция, отображающая всю доступную информацию (имя, версию, производителя, профиль и расширения) о переданных платформах
+void cl_display_arr_platforms_info_all(cl_platform_id* platforms, cl_uint platforms_count)
+{
+	// Проверка платформы
+	if (platforms == NULL) {
+		printf("The wrong platforms was transmitted\n\tProblem area: the \"cl_display_arr_platforms_info_all\" function.\n\n");
+		return;
+	}
+	printf("Number of transferred platforms: %d\n", platforms_count);
+	for (int i = 0; i < platforms_count; i++) {
+		printf("[%d]:", i);
+		cl_init_platform_get_info(platforms[i], CL_PLATFORM_NAME, "Name");
+		cl_init_platform_get_info(platforms[i], CL_PLATFORM_VERSION, "Version");
+		cl_init_platform_get_info(platforms[i], CL_PLATFORM_VENDOR, "Vendor");
+		cl_init_platform_get_info(platforms[i], CL_PLATFORM_PROFILE, "Profile");
+		cl_init_platform_get_info(platforms[i], CL_PLATFORM_EXTENSIONS, "Extensions");
+		printf("\n");
+	}
 }
 
 ///////////////////////////////////////////// Устройства /////////////////////////////////////////////
