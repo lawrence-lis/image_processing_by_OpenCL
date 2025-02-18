@@ -46,12 +46,8 @@ int main(void)
 	cl_display_arr_platforms_info_default(platforms, num_platforms);
 	platform = platforms[0];
 	// Подсчёт устройств
-	err = clGetDeviceIDs(platform, CL_DEVICE_TYPE_GPU, 0, NULL, &num_devices);
-	if (err != CL_SUCCESS) {
-		printf("Error to counting available devices to platform.\n");
-		exit(-1);
-	}
-	else printf("%d available device(s) to platform.\n", num_platforms);
+	num_devices = cl_init_get_num_devices(platform);
+	printf("Available device(s): %d\n", num_devices);
 	// Выделение массива устройств
 	cl_device_id* devices = new cl_device_id[num_devices];
 	err = clGetDeviceIDs(platform, CL_DEVICE_TYPE_GPU, num_devices, devices, NULL);

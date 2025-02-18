@@ -33,3 +33,8 @@ extern "C" PROCESSINGLIBRARY_API cl_platform_id * cl_init_get_array_platforms(cl
 	 * p_s - адрес переменной размера отображаемой информации
 	 * title - строка, по€сн€юща€, что это за информаци€, которую выводит данна функци€*/
 extern "C" PROCESSINGLIBRARY_API void cl_init_platform_get_info(cl_platform_id platform, cl_platform_info info_type, const char* title);
+
+/*   –абота с устройствами   */
+
+// ‘ункци€, возвраща€юща€ количество доступных вычислительных устройств дл€ переданной платформы
+extern "C" PROCESSINGLIBRARY_API cl_uint cl_init_get_num_devices(cl_platform_id platform, cl_device_type type = CL_DEVICE_TYPE_ALL);

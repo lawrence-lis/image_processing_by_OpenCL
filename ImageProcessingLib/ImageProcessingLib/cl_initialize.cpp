@@ -130,3 +130,41 @@ void cl_init_platform_get_info(cl_platform_id platform, cl_platform_info info_ty
 	}
 	free(str);
 }
+
+/*   Работа с устройствами   */
+
+// Функция, возвращаяющая количество доступных вычислительных устройств для переданной платформы
+cl_uint cl_init_get_num_devices(cl_platform_id platform, cl_device_type type)
+{
+	cl_uint res;
+	switch (clGetDeviceIDs(platform, type, 0, NULL, &res))
+	{
+	case CL_SUCCESS:
+		// Подсчёт доступных платформ прошел успешно, вернуть посчитанное значение
+		return res;
+	case CL_INVALID_PLATFORM:
+		// Переданная платформа не является допустимой платформой. Вывести соответствующее сообщение и вернуть 0.
+		printf("The transferred platform is not a valid platform.\n\t[Problem area: the \"cl_init_get_num_devices\" function.]\n\n");
+		return 0;
+	case CL_INVALID_DEVICE_TYPE:
+		// Переданная тип вычислительных устройств не является допустимым. Вывести соответствующее сообщение и вернуть 0.
+		printf("The transmitted type of devices is not valid value.\n\t[Problem area: the \"cl_init_get_num_devices\" function.]\n\n");
+		return 0;
+	case CL_DEVICE_NOT_FOUND:
+		// Не было найдено ни одного устройства OpenCL, соответствующего переданному типу. Вывести соответствующее сообщение и вернуть 0.
+		printf("No OpenCL device matching the transmitted type was found.\n\t[Problem area: the \"cl_init_get_num_devices\" function.]\n\n");
+		return 0;
+	case CL_OUT_OF_RESOURCES:
+		// Не удалось выделить ресурсы, необходимые для реализации OpenCL на устройстве. Вывести соответствующее сообщение и вернуть 0.
+		printf("The resources needed to implement OpenCL on the device could not be allocated.\n\t[Problem area: the \"cl_init_get_num_devices\" function.]\n\n");
+		return 0;
+	case CL_OUT_OF_HOST_MEMORY:
+		// Не удалось выделить на хосте ресурсы, необходимые для реализации OpenCL. Вывести соответствующее сообщение и вернуть 0.
+		printf("The resources needed to implement OpenCL could not be allocated on the host.\n\t[Problem area: the \"cl_init_get_num_devices\" function.]\n\n");
+		return 0;
+	default:
+		// Неизвестная ошибка. Вывести на экран соотвествующее сообщение и вернуть 0
+		printf("Unknown error when calculating the number of available devices.\n\t[Problem area: the \"cl_init_get_num_devices\" function.]\n\n");
+		return 0;
+	}
+}

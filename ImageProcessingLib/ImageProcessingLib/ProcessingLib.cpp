@@ -102,23 +102,6 @@ void cl_display_arr_platforms_info_all(cl_platform_id* platforms, cl_uint platfo
 
 ///////////////////////////////////////////// Устройства /////////////////////////////////////////////
 
-cl_uint ipGetCountDevices(cl_platform_id platform, cl_device_info device_type)
-{
-	cl_uint res, status;
-	if (platform == NULL)
-	{
-		cl_platform_id* platforms = cl_init_get_array_platforms();
-		cl_platform_id subPlatform = platforms[0];
-		if (device_type == NULL)
-			status = clGetDeviceIDs(subPlatform, CL_DEVICE_TYPE_ALL, 0, NULL, &res);
-		else status = clGetDeviceIDs(subPlatform, device_type, 0, NULL, &res);
-		free(platforms);
-	}
-	else if (device_type == NULL) status = clGetDeviceIDs(platform, CL_DEVICE_TYPE_ALL, 0, NULL, &res);
-	else status = clGetDeviceIDs(platform, device_type, 0, NULL, &res);
-	return res;
-}
-
 cl_device_id* ipGetArrDevices(cl_platform_id platform, cl_device_info device_type, cl_uint count)
 {
 	cl_device_id* res;
@@ -137,15 +120,15 @@ cl_device_id* ipGetArrDevices(cl_platform_id platform, cl_device_info device_typ
 			{
 				// Если не был передан тип устройств, то идёт перерасчёт всех доступных устройств всех доступных типов для перевыбранной платформой
 				subDevType = CL_DEVICE_TYPE_ALL;
-				subCount = ipGetCountDevices(subPlatform, subDevType);
+				subCount = cl_init_get_num_devices(subPlatform, subDevType);
 			}
-			else subCount = ipGetCountDevices(subPlatform, subDevType);
+			else subCount = cl_init_get_num_devices(subPlatform, subDevType);
 		}
 		else if (device_type == NULL)
 		{
 			// Если не был передан тип устройств, то идёт перерасчёт всех доступных устройств всех доступных типов для изначально выбранной платформой
 			subDevType = CL_DEVICE_TYPE_ALL;
-			subCount = ipGetCountDevices(subPlatform, subDevType);
+			subCount = cl_init_get_num_devices(subPlatform, subDevType);
 		}
 	}
 	res = new cl_device_id[subCount];
@@ -214,7 +197,7 @@ void ipGetInfoAboutAvailableDevices()
 		// Определение и вывод доступные расширения платформы
 		cl_init_platform_get_info(platforms[i], CL_PLATFORM_EXTENSIONS, "Extensions");
 		printf("---------------------------------------------------------------------------\n");
-		count_devices = ipGetCountDevices(platforms[i], CL_DEVICE_TYPE_ALL);
+		count_devices = cl_init_get_num_devices(platforms[i], CL_DEVICE_TYPE_ALL);
 		printf("Number of available devices: %d\n\n", count_devices);
 		cl_device_id* devices = ipGetArrDevices(platforms[i], CL_DEVICE_TYPE_ALL, count_devices);
 		for (cl_uint j = 0; j < count_devices; j++)
