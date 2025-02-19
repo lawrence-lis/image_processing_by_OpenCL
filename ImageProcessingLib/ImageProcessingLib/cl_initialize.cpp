@@ -168,3 +168,59 @@ cl_uint cl_init_get_num_devices(cl_platform_id platform, cl_device_type type)
 		return 0;
 	}
 }
+
+// Функция, возвращаяющая массив доступных вычислительных устройств для переданной платформы
+cl_device_id* cl_init_get_array_devices(cl_platform_id platform, cl_device_type type, cl_uint count)
+{
+	if (count == 0) {
+		// Если клиент намеренно передал 0, то надо провести переподсчёт доступных платформ
+		count = cl_init_get_num_devices(platform, type);
+		if (count == 0) {
+			/* То есть, если клиент передал 0, или если он ничего не передал, и функция cl_init_get_num_devices() всё равно вернула 0, то значит, что что-то случилось и дальше функция выполняться не будет.
+			Вывести соответствующее сообщение об ошибке и прервать выполнение функции, вернув указатель на NULL.*/
+			printf("No available devices were found.\n\t[Problem area: the \"cl_init_get_array_devices\" function.]\n\n");
+			return NULL;
+		}
+	}
+	// Выделяем память для хранения идентификаторов устройств
+	cl_device_id* res = (cl_device_id*)malloc(sizeof(cl_device_id) * count);
+	if (res == NULL) {
+		printf("Memory allocation error for device IDs\n\t[Problem area: the \"cl_init_get_array_devices\" function.]\n\n");
+		return res;
+	}
+	// Получаем идентификаторы платформ
+	switch (clGetDeviceIDs(platform, type, count, res, NULL))
+	{
+	case CL_SUCCESS:
+		// Подсчёт доступных платформ прошел успешно, вернуть посчитанное значение
+		return res;
+	case CL_INVALID_PLATFORM:
+		// Переданная платформа не является допустимой платформой. Вывести соответствующее сообщение и вернуть 0.
+		printf("The transferred platform is not a valid platform.\n\t[Problem area: the \"cl_init_get_array_devices\" function.]\n\n");
+		return NULL;
+	case CL_INVALID_DEVICE_TYPE:
+		// Переданная тип вычислительных устройств не является допустимым. Вывести соответствующее сообщение и вернуть 0.
+		printf("The transmitted type of devices is not valid value.\n\t[Problem area: the \"cl_init_get_array_devices\" function.]\n\n");
+		return NULL;
+	case CL_INVALID_VALUE:
+		// Присутствует несоответствие между переданными данными и их количеством. Вывести соответствующее сообщение и вернуть 0.
+		printf("There is a discrepancy between the transmitted data and their quantity.\n\t[Problem area: the \"cl_init_get_array_devices\" function.]\n\n");
+		return NULL;
+	case CL_DEVICE_NOT_FOUND:
+		// Не было найдено ни одного устройства OpenCL, соответствующего переданному типу. Вывести соответствующее сообщение и вернуть 0.
+		printf("No OpenCL device matching the transmitted type was found.\n\t[Problem area: the \"cl_init_get_array_devices\" function.]\n\n");
+		return NULL;
+	case CL_OUT_OF_RESOURCES:
+		// Не удалось выделить ресурсы, необходимые для реализации OpenCL на устройстве. Вывести соответствующее сообщение и вернуть 0.
+		printf("The resources needed to implement OpenCL on the device could not be allocated.\n\t[Problem area: the \"cl_init_get_array_devices\" function.]\n\n");
+		return NULL;
+	case CL_OUT_OF_HOST_MEMORY:
+		// Не удалось выделить на хосте ресурсы, необходимые для реализации OpenCL. Вывести соответствующее сообщение и вернуть 0.
+		printf("The resources needed to implement OpenCL could not be allocated on the host.\n\t[Problem area: the \"cl_init_get_array_devices\" function.]\n\n");
+		return NULL;
+	default:
+		// Неизвестная ошибка. Вывести на экран соотвествующее сообщение и вернуть 0
+		printf("Unknown error when calculating the number of available devices.\n\t[Problem area: the \"cl_init_get_array_devices\" function.]\n\n");
+		return NULL;
+	}
+}

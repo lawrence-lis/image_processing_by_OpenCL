@@ -49,12 +49,7 @@ int main(void)
 	num_devices = cl_init_get_num_devices(platform);
 	printf("Available device(s): %d\n", num_devices);
 	// Выделение массива устройств
-	cl_device_id* devices = new cl_device_id[num_devices];
-	err = clGetDeviceIDs(platform, CL_DEVICE_TYPE_GPU, num_devices, devices, NULL);
-	if (err != CL_SUCCESS) {
-		printf("Error to allocate available to platform devices array.\n");
-		exit(-1);
-	}
+	cl_device_id* devices = cl_init_get_array_devices(platform, CL_DEVICE_TYPE_GPU, num_devices);
 	device = devices[0];
 	clGetDeviceInfo(device, CL_DEVICE_NAME, 0, NULL, &str_size);
 	str = new char[str_size];
@@ -185,7 +180,7 @@ int main(void)
 	clReleaseSampler(sampler);
 	clReleaseCommandQueue(commandQueue);
 	clReleaseContext(context);
-	delete[] devices;
+	free(devices);
 	clReleaseDevice(device);
 	free(platforms);
 	delete[] str;
