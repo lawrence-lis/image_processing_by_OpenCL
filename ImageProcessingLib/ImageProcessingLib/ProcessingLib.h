@@ -50,24 +50,40 @@ extern "C" PROCESSINGLIBRARY_API void cl_display_arr_platforms_info_default(cl_p
 		* platforms_count - количество элементов в переданном массиве platforms*/
 extern "C" PROCESSINGLIBRARY_API void cl_display_arr_platforms_info_all(cl_platform_id * platforms, cl_uint platforms_count = cl_init_get_num_platforms());
 
-
 ///////////////////////////////////////////// Устройства /////////////////////////////////////////////
 
-	// Функция, отображающая информацию обо всех доступных устройствах (ДЛЯ ЛЕНИВЫХ)
-extern "C" PROCESSINGLIBRARY_API void ipGetInfoAboutAvailableDevices();
-
-/* Функция, отображающая всю необходимую информацию о выбранном устройстве
+/* Функция, отображающая минимальную информацию (тип, имя, поставщик, версия драйвера и версия OpenCL устройства) о выбранном устройстве
 	Параметры:
-	  *device - идентификатор устройства, информацию о котором надо отобразить*/
-extern "C" PROCESSINGLIBRARY_API void ipGetAllInfoAboutSelectedDevices(cl_device_id device);
+		* device - идентификатор устройства, информацию о которой надо отобразить*/
+extern "C" PROCESSINGLIBRARY_API void cl_display_device_info_minimum(cl_device_id device);
 
-/* Функция, отображающая всю необходимую информацию о выбранном устройстве
+/* Функция, отображающая информацию по-умолчанию (тип, имя, поставщик, версия драйвера, версия OpenCL, профиль, максимальное количество вычислительных блоков и расширения устройства) о выбранном устройстве
 	Параметры:
-	  * device - идентификатор устройства, информацию о котором надо отобразить
-	  * info_type - тип отображаемой информации
-	  * p_s - адрес переменной размера отображаемой информации
-	  * title - строка, поясняющая, что это за информация, которую выводит данна функция*/
-extern "C" PROCESSINGLIBRARY_API void ipGetInfoAboutSelectedDevice(cl_device_id device, cl_device_info info_type, size_t & p_s, const char* title);
+		* device - идентификатор устройства, информацию о которой надо отобразить*/
+extern "C" PROCESSINGLIBRARY_API void cl_display_device_info_default(cl_device_id device);
+
+/* Функция, отображающая всю доступную информацию о выбранном устройстве
+	Параметры:
+		* device - идентификатор устройства, информацию о которой надо отобразить*/
+extern "C" PROCESSINGLIBRARY_API void cl_display_device_info_all(cl_device_id device);
+
+/* Функция, отображающая минимальную информацию о выбранных устройствах
+	Параметры:
+		* devices - указатель на массив идентификаторов устройств, информацию о которых надо отобразить
+		* devices_count - количество элементов в переданном массиве devices*/
+extern "C" PROCESSINGLIBRARY_API void cl_display_arr_devices_info_minimum(cl_device_id * devices, cl_uint devices_count);
+
+/* Функция, отображающая информацию по-умолчанию о выбранных устройствах
+	Параметры:
+		* devices - указатель на массив идентификаторов устройств, информацию о которых надо отобразить
+		* devices_count - количество элементов в переданном массиве devices*/
+extern "C" PROCESSINGLIBRARY_API void cl_display_arr_devices_info_default(cl_device_id * devices, cl_uint platforms_count);
+
+/* Функция, отображающая всю доступную информацию о выбранных устройствах
+	Параметры:
+		* devices - указатель на массив идентификаторов устройств, информацию о которых надо отобразить
+		* devices_count - количество элементов в переданном массиве devices*/
+extern "C" PROCESSINGLIBRARY_API void cl_display_arr_devices_info_all(cl_device_id * devices, cl_uint platforms_count);
 
 ///////////////////////////////////////////// Контекст /////////////////////////////////////////////
 

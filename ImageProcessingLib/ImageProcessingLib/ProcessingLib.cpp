@@ -102,67 +102,115 @@ void cl_display_arr_platforms_info_all(cl_platform_id* platforms, cl_uint platfo
 
 ///////////////////////////////////////////// Устройства /////////////////////////////////////////////
 
-void ipGetInfoAboutSelectedDevice(cl_device_id device, cl_device_info info_type, size_t& p_s, const char* title)
+// Функция, отображающая минимальную информацию (тип, имя, поставщик, версия драйвера и версия OpenCL устройства) о выбранном устройстве
+void cl_display_device_info_minimum(cl_device_id device)
 {
-	cl_uint status = clGetDeviceInfo(device, info_type, 0, NULL, &p_s);
-	char* str = new char[p_s];
-	status = clGetDeviceInfo(device, info_type, p_s, str, NULL);
-	printf("\t%s: %s\n", title, str);
-	delete[] str;
-}
-
-void ipGetAllInfoAboutSelectedDevices(cl_device_id device)
-{
-	size_t size;
-	// Определение и вывод профиля устройства (что бы это не значило)
-	ipGetInfoAboutSelectedDevice(device, CL_DEVICE_PROFILE, size, "Profile");
-	// Определение и вывод типа устройства
-	ipGetInfoAboutSelectedDevice(device, CL_DEVICE_TYPE, size, "Type");
-	// Определение и вывод имени устройства
-	ipGetInfoAboutSelectedDevice(device, CL_DEVICE_NAME, size, "Name");
-	// Определение и вывод имени производителя устройства
-	ipGetInfoAboutSelectedDevice(device, CL_DEVICE_VENDOR, size, "Vendor");
-	// Определение и вывод максимального количества параллельных вычислительных единиц
-	ipGetInfoAboutSelectedDevice(device, CL_DEVICE_MAX_COMPUTE_UNITS, size, "Max compute units");
-	// Определение и вывод максимальной частоты устройства в мегагерцах (MHz)
-	ipGetInfoAboutSelectedDevice(device, CL_DEVICE_MAX_CLOCK_FREQUENCY, size, "Max frequency");
-	// Определение и вывод доступных устройству расширений
-	ipGetInfoAboutSelectedDevice(device, CL_DEVICE_EXTENSIONS, size, "Extensions");
-	printf("\n");
-}
-
-void ipGetInfoAboutAvailableDevices()
-{
-	cl_uint count_platforms = cl_init_get_num_platforms(), count_devices;
-	printf("Number of available platforms: %d\n\n", count_platforms);
-	cl_platform_id* platforms = cl_init_get_array_platforms(count_platforms);
-	size_t size;
-	for (cl_uint i = 0; i < count_platforms; i++)
-	{
-		printf("Platform[%d]:\n", i);
-		// Определение и вывод профиля платформы
-		cl_init_platform_get_info(platforms[i], CL_PLATFORM_PROFILE, "Profile");
-		// Определение и вывод имени платформы
-		cl_init_platform_get_info(platforms[i], CL_PLATFORM_NAME, "Name");
-		// Определение и вывод номер версии платформы
-		cl_init_platform_get_info(platforms[i], CL_PLATFORM_VERSION, "Version");
-		// Определение и вывод доступные расширения платформы
-		cl_init_platform_get_info(platforms[i], CL_PLATFORM_EXTENSIONS, "Extensions");
-		printf("---------------------------------------------------------------------------\n");
-		count_devices = cl_init_get_num_devices(platforms[i], CL_DEVICE_TYPE_ALL);
-		printf("Number of available devices: %d\n\n", count_devices);
-		cl_device_id* devices = cl_init_get_array_devices(platforms[i], CL_DEVICE_TYPE_ALL, count_devices);
-		for (cl_uint j = 0; j < count_devices; j++)
-		{
-			printf("Device[%d]:\n", i);
-			ipGetAllInfoAboutSelectedDevices(devices[j]);
-			printf("-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-\n");
-		}
-		printf("---------------------------------------------------------------------------\n");
-		free(devices);
+	// Проверка платформы
+	if (device == NULL) {
+		printf("The wrong platform was transmitted\n\tProblem area: the \"cl_display_device_info_minimum\" function.\n\n");
+		return;
 	}
-	printf("\n");
-	free(platforms);
+	cl_init_device_get_info(device, CL_DEVICE_TYPE, "Device type");
+	cl_init_device_get_info(device, CL_DEVICE_NAME, "Device name");
+	cl_init_device_get_info(device, CL_DEVICE_VENDOR, "Device vendor");
+	cl_init_device_get_info(device, CL_DRIVER_VERSION, "Device driver version");
+	cl_init_device_get_info(device, CL_DEVICE_VERSION, "Device OpenCL version");
+}
+
+// Функция, отображающая информацию по-умолчанию (тип, имя, поставщик, версия драйвера, версия OpenCL, профиль, максимальное количество вычислительных блоков и расширения устройства) о выбранном устройстве
+void cl_display_device_info_default(cl_device_id device)
+{
+	// Проверка платформы
+	if (device == NULL) {
+		printf("The wrong platform was transmitted\n\tProblem area: the \"cl_display_device_info_default\" function.\n\n");
+		return;
+	}
+	cl_init_device_get_info(device, CL_DEVICE_TYPE, "Device type");
+	cl_init_device_get_info(device, CL_DEVICE_NAME, "Device name");
+	cl_init_device_get_info(device, CL_DEVICE_VENDOR, "Device vendor");
+	cl_init_device_get_info(device, CL_DEVICE_VENDOR_ID, "Device vendor id");
+	cl_init_device_get_info(device, CL_DRIVER_VERSION, "Device driver version");
+	cl_init_device_get_info(device, CL_DEVICE_VERSION, "Device OpenCL version");
+	cl_init_device_get_info(device, CL_DEVICE_PROFILE, "Device profile");
+	cl_init_device_get_info(device, CL_DEVICE_MAX_COMPUTE_UNITS, "Max compute Units");
+
+	cl_init_device_get_info(device, CL_DEVICE_EXTENSIONS, "Device extensions");
+}
+
+// Функция, отображающая всю доступную информацию о выбранном устройстве
+void cl_display_device_info_all(cl_device_id device)
+{
+	// Проверка платформы
+	if (device == NULL) {
+		printf("The wrong platform was transmitted\n\tProblem area: the \"cl_display_device_info_all\" function.\n\n");
+		return;
+	}
+	cl_init_device_get_info(device, CL_DEVICE_TYPE, "Device type");
+	cl_init_device_get_info(device, CL_DEVICE_NAME, "Device name");
+	cl_init_device_get_info(device, CL_DEVICE_VENDOR, "Device vendor");
+	cl_init_device_get_info(device, CL_DRIVER_VERSION, "Device driver version");
+	cl_init_device_get_info(device, CL_DEVICE_VERSION, "Device OpenCL version");
+	cl_init_device_get_info(device, CL_DEVICE_PROFILE, "Device profile");
+	cl_init_device_get_info(device, CL_DEVICE_MAX_COMPUTE_UNITS, "Max compute Units");
+	cl_init_device_get_info(device, CL_DEVICE_MAX_WORK_ITEM_DIMENSIONS, "Max work item dimensions");
+	cl_init_device_get_info(device, CL_DEVICE_MAX_CLOCK_FREQUENCY, "Max clock frequency");
+	cl_init_device_get_info(device, CL_DEVICE_ADDRESS_BITS, "Device address bits");
+	cl_init_device_get_info(device, CL_DEVICE_MAX_READ_IMAGE_ARGS, "Device max read image args");
+	cl_init_device_get_info(device, CL_DEVICE_MAX_WRITE_IMAGE_ARGS, "Device max write image args");
+	cl_init_device_get_info(device, CL_DEVICE_MAX_SAMPLERS, "Device max samplers");
+	cl_init_device_get_info(device, CL_DEVICE_MEM_BASE_ADDR_ALIGN, "Device mem base addr align");
+	cl_init_device_get_info(device, CL_DEVICE_MIN_DATA_TYPE_ALIGN_SIZE, "Device min data type align size");
+	cl_init_device_get_info(device, CL_DEVICE_GLOBAL_MEM_CACHELINE_SIZE, "Device global mem cacheline size");
+	cl_init_device_get_info(device, CL_DEVICE_MAX_CONSTANT_ARGS, "Device max constant args");
+	cl_init_device_get_info(device, CL_DEVICE_EXTENSIONS, "Device extensions");
+}
+
+// Функция, отображающая минимальную информацию (имя и версию) о выбранных устройствах
+void cl_display_arr_devices_info_minimum(cl_device_id* devices, cl_uint devices_count)
+{
+	// Проверка платформы
+	if (devices == NULL) {
+		printf("The wrong platforms was transmitted\n\tProblem area: the \"cl_display_arr_devices_info_minimum\" function.\n\n");
+		return;
+	}
+	printf("Number of transferred devices: %d\n", devices_count);
+	for (int i = 0; i < devices_count; i++) {
+		printf("[%d]:", i);
+		cl_display_device_info_minimum(devices[i]);
+		printf("\n");
+	}
+}
+
+// Функция, отображающая информацию по-умолчанию о выбранных устройствах
+void cl_display_arr_devices_info_default(cl_device_id* devices, cl_uint devices_count)
+{
+	// Проверка платформы
+	if (devices == NULL) {
+		printf("The wrong platforms was transmitted\n\tProblem area: the \"cl_display_arr_devices_info_default\" function.\n\n");
+		return;
+	}
+	printf("Number of transferred devices: %d\n", devices_count);
+	for (int i = 0; i < devices_count; i++) {
+		printf("[%d]:", i);
+		cl_display_device_info_default(devices[i]);
+		printf("\n");
+	}
+}
+
+// Функция, отображающая всю доступную информацию о выбранных устройствах
+void cl_display_arr_devices_info_all(cl_device_id* devices, cl_uint devices_count)
+{
+	// Проверка платформы
+	if (devices == NULL) {
+		printf("The wrong platforms was transmitted\n\tProblem area: the \"cl_display_arr_devices_info_all\" function.\n\n");
+		return;
+	}
+	printf("Number of transferred devices: %d\n", devices_count);
+	for (int i = 0; i < devices_count; i++) {
+		printf("[%d]:", i);
+		cl_display_device_info_all(devices[i]);
+		printf("\n");
+	}
 }
 
 ///////////////////////////////////////////// Контекст /////////////////////////////////////////////
@@ -223,8 +271,6 @@ cl_int ipBuildProgram(cl_program prg, cl_device_id* devs)
 		clGetProgramBuildInfo(prg, devs[i], CL_PROGRAM_BUILD_LOG, 0, NULL, &log_size);
 		log = (char*)malloc(log_size);
 		clGetProgramBuildInfo(prg, devs[i], CL_PROGRAM_BUILD_LOG, log_size, log, NULL);
-		printf("Device: ");
-		ipGetInfoAboutSelectedDevice(devs[i], CL_DEVICE_NAME, dev_size, "Name");
 		printf("\n  > Program Build Log: %s\n", log);
 	}
 	printf("\n");

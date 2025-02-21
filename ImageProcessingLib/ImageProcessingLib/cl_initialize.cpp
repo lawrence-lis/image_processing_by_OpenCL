@@ -78,25 +78,25 @@ void cl_init_platform_get_info(cl_platform_id platform, cl_platform_info info_ty
 		break;
 	case CL_INVALID_PLATFORM:
 		// Выподает если переданная платформа не является доступной платформой. Вывести соответствующее сообщение и вернуть управление.
-		printf("The transferred platform is not a valid platform\n\tProblem area: the \"cl_init_platform_get_info\" function\n\n");
+		printf("The transferred platform is not a valid platform.\n\tProblem area: the \"cl_init_platform_get_info\" function\n\n");
 		return;
 	case CL_INVALID_VALUE:
 		// По идее на данном может выпасть если переданный тип получаемой информации не является одним из поддерживаемых значений. Вывести соответствующее сообщение и вернуть управление.
-		printf("The transmitted type of information received is not one of the supported values\n\tProblem area: the \"cl_init_platform_get_info\" function\n\n");
+		printf("The transmitted type of information received is not one of the supported values.\n\tProblem area: the \"cl_init_platform_get_info\" function\n\n");
 		return;
 	case CL_OUT_OF_HOST_MEMORY:
 		// Выподает если происходит сбой в распределении ресурсов, требуемых реализацией OpenCL на хосте. Вывести соответствующее сообщение и вернуть управление.
-		printf("There was a failure in the allocation of resources required by the OpenCL implementation on the host\n\tProblem area: the \"cl_init_platform_get_info\" function\n\n");
+		printf("There was a failure in the allocation of resources required by the OpenCL implementation on the host.\n\tProblem area: the \"cl_init_platform_get_info\" function\n\n");
 		return;
 	default:
 		// Прроизошло что-то непонятное, но подсчёт выделяемой информации не завершился успешно. Вывести соответствующее сообщение и вернуть управление.
-		printf("Unknown error\n\tProblem area: the \"cl_init_platform_get_info\" function\n\n");
+		printf("Unknown error.\n\tProblem area: the \"cl_init_platform_get_info\" function\n\n");
 		return;
 	}
 	// Выделяем память для хранения запрашиваемой информации
 	char* str = (char*)malloc(sizeof(char) * p_s);
 	if (str == NULL) {
-		printf("Memory allocation error for platform IDs\n\tProblem area: the \"cl_init_get_array_platforms\" function.\n\n");
+		printf("Memory allocation error for platform IDs.\n\tProblem area: the \"cl_init_get_array_platforms\" function.\n\n");
 		return;
 	}
 	// Получаем и выводим запрашиваемую информацию
@@ -109,19 +109,19 @@ void cl_init_platform_get_info(cl_platform_id platform, cl_platform_info info_ty
 		break;
 	case CL_INVALID_PLATFORM:
 		// Выподает если переданная платформа (первый параметр функции) не является доступной платформой. Вывести соответствующее сообщение и вернуть управление.
-		printf("The transferred platform is not a valid platform\n\tProblem area: the \"cl_init_platform_get_info\" function\n\n");
+		printf("The transferred platform is not a valid platform.\n\tProblem area: the \"cl_init_platform_get_info\" function\n\n");
 		break;
 	case CL_INVALID_VALUE:
 		// Выпадает если переданный тип информации, указанный в параметре info_type, не является одним из поддерживаемых значений или если размер в байтах, указанный в параметре p_s, меньше размера
 		// возвращаемого типа, указанного в таблице запросов платформы, а значение указателя на ячейку памяти, переаднный в параметре str не равно NULL. Вывести соответствующее сообщение и вернуть 
 		// управление.
 		printf("The transmitted type of information specified in the info_type parameter is not one of the supported values, or if the size in bytes specified in the p_s parameter is less than the ");
-		printf("size of the returned type specified in the platform query table, and the value of the pointer to the memory cell redirected in the str parameter is not NULL");
+		printf("size of the returned type specified in the platform query table, and the value of the pointer to the memory cell redirected in the str parameter is not NULL.");
 		printf("\n\tProblem area : the \"cl_init_platform_get_info\" function\n\n");
 		break;
 	case CL_OUT_OF_HOST_MEMORY:
 		// Выподает если происходит сбой в распределении ресурсов, требуемых реализацией OpenCL на хосте (так написано в спецификации). Вывести соответствующее сообщение и вернуть управление.
-		printf("There was a failure in the allocation of resources required by the OpenCL implementation on the host\n\tProblem area: the \"cl_init_platform_get_info\" function\n\n");
+		printf("There was a failure in the allocation of resources required by the OpenCL implementation on the host.\n\tProblem area: the \"cl_init_platform_get_info\" function\n\n");
 		break;
 	default:
 		// Прроизошло что-то непонятное, но подсчёт выделяемой информации не завершился успешно. Вывести соответствующее сообщение и вернуть управление.
@@ -222,5 +222,180 @@ cl_device_id* cl_init_get_array_devices(cl_platform_id platform, cl_device_type 
 		// Неизвестная ошибка. Вывести на экран соотвествующее сообщение и вернуть 0
 		printf("Unknown error when calculating the number of available devices.\n\t[Problem area: the \"cl_init_get_array_devices\" function.]\n\n");
 		return NULL;
+	}
+}
+
+// Функция для получения и отображения строки информации о переданном устройстве
+void cl_init_device_get_info(cl_device_id device, cl_device_info info, const char* title)
+{
+	size_t p_s;
+	// Сперва посчитаем количество символов, необходимых для записи нужной информации
+	switch (clGetDeviceInfo(device, info, 0, NULL, &p_s))
+	{
+	case CL_SUCCESS:
+		// Функция clGetPlatformInfo выполнена успешно, количество памяти, необходимой для нужной информации, посчитано. Нужно просто вернуться к выполнению функции.
+		break;
+	case CL_INVALID_DEVICE:
+		// Выподает если переданная платформа не является доступной платформой. Вывести соответствующее сообщение и вернуть управление.
+		printf("The transferred device is not a valid device.\n\tProblem area: the \"cl_init_device_get_info\" function\n\n");
+		return;
+	case CL_INVALID_VALUE:
+		// По идее на данном может выпасть если переданный тип получаемой информации не является одним из поддерживаемых значений. Вывести соответствующее сообщение и вернуть управление.
+		printf("The transmitted type of information received is not one of the supported values.\n\tProblem area: the \"cl_init_device_get_info\" function\n\n");
+		return;
+	case CL_OUT_OF_RESOURCES:
+		// Не удается выделить ресурсы, требуемые реализацией OpenCL на устройстве. Вывести соответствующее сообщение и вернуть управление.
+		printf("There is a failure to allocate resources required by the OpenCL implementation on the device.\n\tProblem area: the \"cl_init_device_get_info\" function\n\n");
+		return;
+	case CL_OUT_OF_HOST_MEMORY:
+		// Выподает если происходит сбой в распределении ресурсов, требуемых реализацией OpenCL на хосте. Вывести соответствующее сообщение и вернуть управление.
+		printf("There was a failure in the allocation of resources required by the OpenCL implementation on the host.\n\tProblem area: the \"cl_init_platform_get_info\" function\n\n");
+		return;
+	default:
+		// Прроизошло что-то непонятное, но подсчёт выделяемой информации не завершился успешно. Вывести соответствующее сообщение и вернуть управление.
+		printf("Unknown error\n\tProblem area: the \"cl_init_platform_get_info\" function\n\n");
+		return;
+	}
+	// Расхождение по принятому типу информации
+	switch (info)
+	{
+	case CL_DEVICE_TYPE:
+	{
+		cl_device_type s;
+		// Получаем и выводим запрашиваемую информацию
+		switch (clGetDeviceInfo(device, info, p_s, &s, NULL))
+		{
+		case CL_SUCCESS:
+			// Функция clGetPlatformInfo выполнена успешно, запрашиваемая информация получена. Теперь определим тип запрашиваемой информации и выводим ей на экран.
+			if (s == CL_DEVICE_TYPE_CPU) printf("\t%s: CPU\n", title);
+			if (s == CL_DEVICE_TYPE_GPU) printf("\t%s: GPU\n", title);
+			if (s == CL_DEVICE_TYPE_DEFAULT) printf("\t%s: DEFAULT\n", title);
+			if (s == CL_DEVICE_TYPE_ACCELERATOR) printf("\t%s: ACCELERATOR\n", title);
+			break;
+		case CL_INVALID_DEVICE:
+			// Выподает если переданная платформа не является доступной платформой. Вывести соответствующее сообщение и вернуть управление.
+			printf("The transferred device is not a valid device.\n\tProblem area: the \"cl_init_device_get_info\" function\n\n");
+			break;
+		case CL_INVALID_VALUE:
+			// По идее на данном может выпасть если переданный тип получаемой информации не является одним из поддерживаемых значений. Вывести соответствующее сообщение и вернуть управление.
+			printf("The transmitted type of information received is not one of the supported values.\n\tProblem area: the \"cl_init_device_get_info\" function\n\n");
+			break;
+		case CL_OUT_OF_RESOURCES:
+			// Не удается выделить ресурсы, требуемые реализацией OpenCL на устройстве. Вывести соответствующее сообщение и вернуть управление.
+			printf("There is a failure to allocate resources required by the OpenCL implementation on the device.\n\tProblem area: the \"cl_init_device_get_info\" function\n\n");
+			break;
+		case CL_OUT_OF_HOST_MEMORY:
+			// Выподает если происходит сбой в распределении ресурсов, требуемых реализацией OpenCL на хосте. Вывести соответствующее сообщение и вернуть управление.
+			printf("There was a failure in the allocation of resources required by the OpenCL implementation on the host\n\tProblem area: the \"cl_init_platform_get_info\" function\n\n");
+			break;
+		default:
+			// Прроизошло что-то непонятное, но подсчёт выделяемой информации не завершился успешно. Вывести соответствующее сообщение и вернуть управление.
+			printf("Unknown error\n\tProblem area: the \"cl_init_platform_get_info\" function\n\n");
+			break;
+		}
+	}
+	break;
+	case CL_DEVICE_NAME:
+	case CL_DEVICE_VENDOR:
+	case CL_DEVICE_VERSION:
+	case CL_DEVICE_PROFILE:
+	case CL_DRIVER_VERSION:
+	case CL_DEVICE_EXTENSIONS:
+	{
+		// Выделяем память для хранения запрашиваемой информации
+		char* str = (char*)malloc(sizeof(char) * p_s);
+		if (str == NULL) {
+			printf("Memory allocation error for platform IDs.\n\tProblem area: the \"cl_init_get_array_platforms\" function.\n\n");
+			return;
+		}
+		// Получаем и выводим запрашиваемую информацию
+		switch (clGetDeviceInfo(device, info, p_s, str, NULL))
+		{
+		case CL_SUCCESS:
+			// Функция clGetPlatformInfo выполнена успешно, запрашиваемая информация получена. Теперь определим тип запрашиваемой информации и выводим ей на экран.
+			printf("\t%s: %s\n", title, str);
+			break;
+		case CL_INVALID_DEVICE:
+			// Выподает если переданная платформа не является доступной платформой. Вывести соответствующее сообщение и вернуть управление.
+			printf("The transferred device is not a valid device.\n\tProblem area: the \"cl_init_device_get_info\" function\n\n");
+			break;
+		case CL_INVALID_VALUE:
+			// По идее на данном может выпасть если переданный тип получаемой информации не является одним из поддерживаемых значений. Вывести соответствующее сообщение и вернуть управление.
+			printf("The transmitted type of information received is not one of the supported values.\n\tProblem area: the \"cl_init_device_get_info\" function\n\n");
+			break;
+		case CL_OUT_OF_RESOURCES:
+			// Не удается выделить ресурсы, требуемые реализацией OpenCL на устройстве. Вывести соответствующее сообщение и вернуть управление.
+			printf("There is a failure to allocate resources required by the OpenCL implementation on the device.\n\tProblem area: the \"cl_init_device_get_info\" function\n\n");
+			break;
+		case CL_OUT_OF_HOST_MEMORY:
+			// Выподает если происходит сбой в распределении ресурсов, требуемых реализацией OpenCL на хосте. Вывести соответствующее сообщение и вернуть управление.
+			printf("There was a failure in the allocation of resources required by the OpenCL implementation on the host\n\tProblem area: the \"cl_init_platform_get_info\" function\n\n");
+			break;
+		default:
+			// Прроизошло что-то непонятное, но подсчёт выделяемой информации не завершился успешно. Вывести соответствующее сообщение и вернуть управление.
+			printf("Unknown error\n\tProblem area: the \"cl_init_platform_get_info\" function\n\n");
+			break;
+		}
+		free(str);
+	}
+	break;
+	case CL_DEVICE_VENDOR_ID:
+	case CL_DEVICE_MAX_COMPUTE_UNITS:
+	case CL_DEVICE_MAX_WORK_ITEM_DIMENSIONS:
+	case CL_DEVICE_PREFERRED_VECTOR_WIDTH_CHAR:
+	case CL_DEVICE_PREFERRED_VECTOR_WIDTH_SHORT:
+	case CL_DEVICE_PREFERRED_VECTOR_WIDTH_INT:
+	case CL_DEVICE_PREFERRED_VECTOR_WIDTH_LONG:
+	case CL_DEVICE_PREFERRED_VECTOR_WIDTH_FLOAT:
+	case CL_DEVICE_PREFERRED_VECTOR_WIDTH_DOUBLE:
+	case CL_DEVICE_PREFERRED_VECTOR_WIDTH_HALF:
+	case CL_DEVICE_NATIVE_VECTOR_WIDTH_CHAR:
+	case CL_DEVICE_NATIVE_VECTOR_WIDTH_SHORT:
+	case CL_DEVICE_NATIVE_VECTOR_WIDTH_INT:
+	case CL_DEVICE_NATIVE_VECTOR_WIDTH_LONG:
+	case CL_DEVICE_NATIVE_VECTOR_WIDTH_FLOAT:
+	case CL_DEVICE_NATIVE_VECTOR_WIDTH_DOUBLE:
+	case CL_DEVICE_NATIVE_VECTOR_WIDTH_HALF:
+	case CL_DEVICE_MAX_CLOCK_FREQUENCY:
+	case CL_DEVICE_ADDRESS_BITS:
+	case CL_DEVICE_MAX_READ_IMAGE_ARGS:
+	case CL_DEVICE_MAX_WRITE_IMAGE_ARGS:
+	case CL_DEVICE_MAX_SAMPLERS:
+	case CL_DEVICE_MEM_BASE_ADDR_ALIGN:
+	case CL_DEVICE_MIN_DATA_TYPE_ALIGN_SIZE:
+	case CL_DEVICE_GLOBAL_MEM_CACHELINE_SIZE:
+	case CL_DEVICE_MAX_CONSTANT_ARGS:
+	{
+		cl_uint s;
+		switch (clGetDeviceInfo(device, info, p_s, &s, NULL))
+		{
+		case CL_SUCCESS:
+			// Функция clGetPlatformInfo выполнена успешно, запрашиваемая информация получена. Теперь определим тип запрашиваемой информации и выводим ей на экран.
+			printf("\t%s: %d\n", title, s);
+			break;
+		case CL_INVALID_DEVICE:
+			// Выподает если переданная платформа не является доступной платформой. Вывести соответствующее сообщение и вернуть управление.
+			printf("The transferred device is not a valid device.\n\tProblem area: the \"cl_init_device_get_info\" function\n\n");
+			break;
+		case CL_INVALID_VALUE:
+			// По идее на данном может выпасть если переданный тип получаемой информации не является одним из поддерживаемых значений. Вывести соответствующее сообщение и вернуть управление.
+			printf("The transmitted type of information received is not one of the supported values.\n\tProblem area: the \"cl_init_device_get_info\" function\n\n");
+			break;
+		case CL_OUT_OF_RESOURCES:
+			// Не удается выделить ресурсы, требуемые реализацией OpenCL на устройстве. Вывести соответствующее сообщение и вернуть управление.
+			printf("There is a failure to allocate resources required by the OpenCL implementation on the device.\n\tProblem area: the \"cl_init_device_get_info\" function\n\n");
+			break;
+		case CL_OUT_OF_HOST_MEMORY:
+			// Выподает если происходит сбой в распределении ресурсов, требуемых реализацией OpenCL на хосте. Вывести соответствующее сообщение и вернуть управление.
+			printf("There was a failure in the allocation of resources required by the OpenCL implementation on the host\n\tProblem area: the \"cl_init_platform_get_info\" function\n\n");
+			break;
+		default:
+			// Прроизошло что-то непонятное, но подсчёт выделяемой информации не завершился успешно. Вывести соответствующее сообщение и вернуть управление.
+			printf("Unknown error\n\tProblem area: the \"cl_init_platform_get_info\" function\n\n");
+			break;
+		}
+	}
+	break;
+	/*Сюда можно ещё накидать*/
 	}
 }

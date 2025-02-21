@@ -32,8 +32,6 @@ int main(void)
 	///////////// Настройка среды для работы с OpenCL /////////////
 	/////////////////////////////////////////////////////////////*/
 	cl_int err;
-	size_t str_size;
-	char* str;
 	cl_uint num_platforms, num_devices;
 	cl_platform_id platform;
 	cl_device_id device;
@@ -50,15 +48,12 @@ int main(void)
 	printf("Available device(s): %d\n", num_devices);
 	// Выделение массива устройств
 	cl_device_id* devices = cl_init_get_array_devices(platform, CL_DEVICE_TYPE_GPU, num_devices);
+	cl_display_arr_devices_info_default(devices, num_devices);
 	device = devices[0];
-	clGetDeviceInfo(device, CL_DEVICE_NAME, 0, NULL, &str_size);
-	str = new char[str_size];
-	clGetDeviceInfo(device, CL_DEVICE_NAME, str_size, str, NULL);
-	printf("Selected device: %s.\n", str);
 	// Создание контекста
 	cl_context context = clCreateContext(NULL, 1, &device, NULL, NULL, &err);
 	if (err != CL_SUCCESS) {
-		printf("Error to create context to %s device.\n", str);
+		printf("Error to create context to device.\n");
 		exit(-1);
 	}
 	//Создание очереди команд
@@ -183,6 +178,5 @@ int main(void)
 	free(devices);
 	clReleaseDevice(device);
 	free(platforms);
-	delete[] str;
 	delete[] buffer;
 }

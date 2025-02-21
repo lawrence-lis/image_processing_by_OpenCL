@@ -48,3 +48,10 @@ extern "C" PROCESSINGLIBRARY_API cl_uint cl_init_get_num_devices(cl_platform_id 
 	 * type - тип доступных вычислительных устройств, массив которых надо вернуть
 	 * count - количество доступных устройств (предполагается, что данное число предопределено до вызова данной функции, в противном случае функция посчитает её самостоятельно)*/
 extern "C" PROCESSINGLIBRARY_API cl_device_id * cl_init_get_array_devices(cl_platform_id platform, cl_device_type type, cl_uint count);
+
+/* Функция для получения и отображения строки информации о переданном устройстве
+	Парметры:
+	 * device - идентификатор устройства, информацию о котором надо получить и отобразить 
+	 * info - тип отображаемой информации
+	 * title - строка, поясняющая, что это за информация, которую выводит данна функция*/
+extern "C" PROCESSINGLIBRARY_API void cl_init_device_get_info(cl_device_id device, cl_device_info info, const char* title);
