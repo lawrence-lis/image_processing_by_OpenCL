@@ -215,12 +215,6 @@ void cl_display_arr_devices_info_all(cl_device_id* devices, cl_uint devices_coun
 
 ///////////////////////////////////////////// Контекст /////////////////////////////////////////////
 
-cl_context ipGetContextByArr(cl_device_id* devs, cl_uint count)
-{
-	cl_context res = clCreateContext(NULL, count, devs, NULL, NULL, NULL);
-	return res;
-}
-
 cl_context ipGetContextByType(cl_device_type type)
 {
 	cl_context res = clCreateContextFromType(NULL, type, NULL, NULL, NULL);

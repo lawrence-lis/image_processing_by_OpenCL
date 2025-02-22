@@ -131,6 +131,7 @@ void cl_init_platform_get_info(cl_platform_id platform, cl_platform_info info_ty
 	free(str);
 }
 
+
 /*   Работа с устройствами   */
 
 // Функция, возвращаяющая количество доступных вычислительных устройств для переданной платформы
@@ -397,5 +398,43 @@ void cl_init_device_get_info(cl_device_id device, cl_device_info info, const cha
 	}
 	break;
 	/*Сюда можно ещё накидать*/
+	}
+}
+
+
+/*   Работа с контекстом   */
+
+// Функция, создающая контекст на основе списка конкретных устройств
+cl_context cl_init_create_context_by_devices(cl_device_id* devices, cl_uint num_devices)
+{
+	// Создаем контекст OpenCL
+	cl_int err;
+	cl_context context = clCreateContext(NULL, num_devices, devices, NULL, NULL, &err);
+	switch (err)
+	{
+	case CL_SUCCESS:
+		// Контекст успешно создан. Просто вернуть значение (Во всех остальных случаях функция clCreateContext вернёт NULL
+		return context;
+	case CL_INVALID_VALUE:
+		// Тут проблема может быть только с входными аргументами, т.к. остальные варианты такого возвращаемого кода ошибки исключены ввиду особенностей существующей реализации функции cl_init_context_by_devices
+		printf("Invalid input arguments.\n\tProblem area: the \"cl_init_context_by_devices\" function\n\n");
+		return NULL;
+	case CL_INVALID_DEVICE:
+		// Проблема в переданных устройствах.
+		printf("Any device in the passed \"devices\" parameter is not a valid device.\n\tProblem area: the \"cl_init_context_by_devices\" function\n\n");
+		return NULL;
+	case CL_DEVICE_NOT_AVAILABLE:
+		// Устройство в разделе devices в настоящее время недоступно, даже если оно было возвращено clGetDeviceIDs.
+		printf("A device in \"devices\" is currently not available even though the device was returned by clGetDeviceIDs.\n\tProblem area: the \"cl_init_context_by_devices\" function\n\n");
+		return NULL;
+	case CL_OUT_OF_RESOURCES:
+		// Не удается выделить ресурсы, требуемые реализацией OpenCL на устройстве.
+		printf("There is a failure to allocate resources required by the OpenCL implementation on the device.\n\tProblem area: the \"cl_init_context_by_devices\" function\n\n");
+		return NULL;
+	case CL_OUT_OF_HOST_MEMORY:
+		// Не удается выделить ресурсы, требуемые реализацией OpenCL, на хосте.
+		printf("There is a failure to allocate resources required by the OpenCL implementation on the host.\n\tProblem area: the \"cl_init_context_by_devices\" function\n\n");
+		return NULL;
+	// Остальные варианты на данный момент не реализованы 
 	}
 }
