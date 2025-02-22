@@ -438,3 +438,30 @@ cl_context cl_init_create_context_by_devices(cl_device_id* devices, cl_uint num_
 	// Остальные варианты на данный момент не реализованы 
 	}
 }
+
+// Функция, создающая контекст для всех устройств заданного типа
+cl_context cl_init_create_context_by_device_type(cl_device_type type)
+{
+	// Создаем контекст OpenCL
+	cl_int err;
+	cl_context context = clCreateContextFromType(NULL, type, NULL, NULL, &err);
+	switch (err)
+	{
+	case CL_SUCCESS:
+		// Контекст успешно создан. Просто вернуть значение (Во всех остальных случаях функция clCreateContext вернёт NULL
+		return context;
+	case CL_INVALID_DEVICE_TYPE:
+		// Переданный тип стройств не является допустимым.
+		printf("\"device_type\" is not a valid value.\n\tProblem area: the \"cl_init_create_context_by_device_type\" function\n\n");
+		return NULL;
+	case CL_OUT_OF_RESOURCES:
+		// Не удается выделить ресурсы, требуемые реализацией OpenCL на устройстве.
+		printf("There is a failure to allocate resources required by the OpenCL implementation on the device.\n\tProblem area: the \"cl_init_context_by_devices\" function\n\n");
+		return NULL;
+	case CL_OUT_OF_HOST_MEMORY:
+		// Не удается выделить ресурсы, требуемые реализацией OpenCL, на хосте.
+		printf("There is a failure to allocate resources required by the OpenCL implementation on the host.\n\tProblem area: the \"cl_init_context_by_devices\" function\n\n");
+		return NULL;
+		// Остальные варианты на данный момент не реализованы 
+	}
+}

@@ -213,14 +213,6 @@ void cl_display_arr_devices_info_all(cl_device_id* devices, cl_uint devices_coun
 	}
 }
 
-///////////////////////////////////////////// Контекст /////////////////////////////////////////////
-
-cl_context ipGetContextByType(cl_device_type type)
-{
-	cl_context res = clCreateContextFromType(NULL, type, NULL, NULL, NULL);
-	return res;
-}
-
 ///////////////////////////////////////////// Очередь команд /////////////////////////////////////////////
 
 cl_command_queue ipGetComQueueToDevice(cl_context ctx, cl_device_id dev)

@@ -85,13 +85,6 @@ extern "C" PROCESSINGLIBRARY_API void cl_display_arr_devices_info_default(cl_dev
 		* devices_count - количество элементов в переданном массиве devices*/
 extern "C" PROCESSINGLIBRARY_API void cl_display_arr_devices_info_all(cl_device_id * devices, cl_uint platforms_count);
 
-///////////////////////////////////////////// Контекст /////////////////////////////////////////////
-
-/* Функция, создающая контекст для всех устройств заданного типа
-	Параметры:
-	* type - тип устройств, для которых создаётся контекст*/
-extern "C" PROCESSINGLIBRARY_API cl_context ipGetContextByType(cl_device_type type);
-
 ///////////////////////////////////////////// Очередь команд /////////////////////////////////////////////
 
 /* Функция, создающая очередь команд для созданного контекста и выбранного устройства
