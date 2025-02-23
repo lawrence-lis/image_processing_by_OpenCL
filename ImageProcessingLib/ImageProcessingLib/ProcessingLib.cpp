@@ -107,7 +107,7 @@ void cl_display_device_info_minimum(cl_device_id device)
 {
 	// Проверка платформы
 	if (device == NULL) {
-		printf("The wrong platform was transmitted\n\tProblem area: the \"cl_display_device_info_minimum\" function.\n\n");
+		printf("The wrong device was transmitted\n\tProblem area: the \"cl_display_device_info_minimum\" function.\n\n");
 		return;
 	}
 	cl_init_device_get_info(device, CL_DEVICE_TYPE, "Device type");
@@ -122,7 +122,7 @@ void cl_display_device_info_default(cl_device_id device)
 {
 	// Проверка платформы
 	if (device == NULL) {
-		printf("The wrong platform was transmitted\n\tProblem area: the \"cl_display_device_info_default\" function.\n\n");
+		printf("The wrong device was transmitted\n\tProblem area: the \"cl_display_device_info_default\" function.\n\n");
 		return;
 	}
 	cl_init_device_get_info(device, CL_DEVICE_TYPE, "Device type");
@@ -142,7 +142,7 @@ void cl_display_device_info_all(cl_device_id device)
 {
 	// Проверка платформы
 	if (device == NULL) {
-		printf("The wrong platform was transmitted\n\tProblem area: the \"cl_display_device_info_all\" function.\n\n");
+		printf("The wrong device was transmitted\n\tProblem area: the \"cl_display_device_info_all\" function.\n\n");
 		return;
 	}
 	cl_init_device_get_info(device, CL_DEVICE_TYPE, "Device type");
@@ -170,7 +170,7 @@ void cl_display_arr_devices_info_minimum(cl_device_id* devices, cl_uint devices_
 {
 	// Проверка платформы
 	if (devices == NULL) {
-		printf("The wrong platforms was transmitted\n\tProblem area: the \"cl_display_arr_devices_info_minimum\" function.\n\n");
+		printf("The wrong devices was transmitted\n\tProblem area: the \"cl_display_arr_devices_info_minimum\" function.\n\n");
 		return;
 	}
 	printf("Number of transferred devices: %d\n", devices_count);
@@ -186,7 +186,7 @@ void cl_display_arr_devices_info_default(cl_device_id* devices, cl_uint devices_
 {
 	// Проверка платформы
 	if (devices == NULL) {
-		printf("The wrong platforms was transmitted\n\tProblem area: the \"cl_display_arr_devices_info_default\" function.\n\n");
+		printf("The wrong devices was transmitted\n\tProblem area: the \"cl_display_arr_devices_info_default\" function.\n\n");
 		return;
 	}
 	printf("Number of transferred devices: %d\n", devices_count);
@@ -202,13 +202,44 @@ void cl_display_arr_devices_info_all(cl_device_id* devices, cl_uint devices_coun
 {
 	// Проверка платформы
 	if (devices == NULL) {
-		printf("The wrong platforms was transmitted\n\tProblem area: the \"cl_display_arr_devices_info_all\" function.\n\n");
+		printf("The wrong devices was transmitted\n\tProblem area: the \"cl_display_arr_devices_info_all\" function.\n\n");
 		return;
 	}
 	printf("Number of transferred devices: %d\n", devices_count);
 	for (int i = 0; i < devices_count; i++) {
 		printf("[%d]:", i);
 		cl_display_device_info_all(devices[i]);
+		printf("\n");
+	}
+}
+
+
+///////////////////////////////////////////// Контекст /////////////////////////////////////////////
+
+// Функция, отображающая минимальную информацию (количество и массив устройств) о выбранном контексте
+void cl_display_context_info_minimum(cl_context context)
+{
+	// Проверка контекста
+	if (context == NULL) {
+		printf("The wrong context was transmitted\n\tProblem area: the \"cl_display_context_info_minimum\" function.\n\n");
+		return;
+	}
+	cl_init_context_get_info(context, CL_CONTEXT_NUM_DEVICES, "Number of context's devices");
+	cl_init_context_get_info(context, CL_CONTEXT_DEVICES, "Сontext's devices");
+}
+
+// Функция, отображающая минимальную информацию о выбранных контекстах
+void cl_display_arr_contexts_info_minimum(cl_context* contexts, cl_uint contexts_count)
+{
+	// Проверка контекста
+	if (contexts == NULL) {
+		printf("The wrong context was transmitted\n\tProblem area: the \"cl_display_arr_contexts_info_minimum\" function.\n\n");
+		return;
+	}
+	printf("Number of transferred contexts: %d\n", contexts_count);
+	for (int i = 0; i < contexts_count; i++) {
+		printf("[%d]:", i);
+		cl_display_context_info_minimum(contexts[i]);
 		printf("\n");
 	}
 }

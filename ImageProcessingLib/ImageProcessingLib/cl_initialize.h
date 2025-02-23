@@ -2,8 +2,7 @@
 /*Этот файл содержит набор функций для инициализации OpenCL, которая включает в себя следующие основные разделы:
 	- выбор платформы;
 	- выбор устройств(а);
-	- создание контекста;
-	- создание очереди команд.
+	- создание контекста.
 */
 
 #define PROCESSINGLIBRARY_EXPORTS
@@ -70,3 +69,10 @@ extern "C" PROCESSINGLIBRARY_API cl_context cl_init_create_context_by_devices(cl
 	Параметры:
 	* type - тип устройств, для которых создаётся контекст*/
 extern "C" PROCESSINGLIBRARY_API cl_context cl_init_create_context_by_device_type(cl_device_type type);
+
+/* Функция для получения и отображения строки информации о переданном контексте
+	Парметры:
+	 * context - контекст, информацию о котором надо получить и отобразить
+	 * info - тип отображаемой информации
+	 * title - строка, поясняющая, что это за информация, которую выводит данна функция*/
+extern "C" PROCESSINGLIBRARY_API void cl_init_context_get_info(cl_context context, cl_context_info info, const char* title);

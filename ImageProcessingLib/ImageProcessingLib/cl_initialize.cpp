@@ -250,11 +250,11 @@ void cl_init_device_get_info(cl_device_id device, cl_device_info info, const cha
 		return;
 	case CL_OUT_OF_HOST_MEMORY:
 		// Выподает если происходит сбой в распределении ресурсов, требуемых реализацией OpenCL на хосте. Вывести соответствующее сообщение и вернуть управление.
-		printf("There was a failure in the allocation of resources required by the OpenCL implementation on the host.\n\tProblem area: the \"cl_init_platform_get_info\" function\n\n");
+		printf("There was a failure in the allocation of resources required by the OpenCL implementation on the host.\n\tProblem area: the \"cl_init_device_get_info\" function\n\n");
 		return;
 	default:
 		// Прроизошло что-то непонятное, но подсчёт выделяемой информации не завершился успешно. Вывести соответствующее сообщение и вернуть управление.
-		printf("Unknown error\n\tProblem area: the \"cl_init_platform_get_info\" function\n\n");
+		printf("Unknown error\n\tProblem area: the \"cl_init_device_get_info\" function\n\n");
 		return;
 	}
 	// Расхождение по принятому типу информации
@@ -287,11 +287,11 @@ void cl_init_device_get_info(cl_device_id device, cl_device_info info, const cha
 			break;
 		case CL_OUT_OF_HOST_MEMORY:
 			// Выподает если происходит сбой в распределении ресурсов, требуемых реализацией OpenCL на хосте. Вывести соответствующее сообщение и вернуть управление.
-			printf("There was a failure in the allocation of resources required by the OpenCL implementation on the host\n\tProblem area: the \"cl_init_platform_get_info\" function\n\n");
+			printf("There was a failure in the allocation of resources required by the OpenCL implementation on the host\n\tProblem area: the \"cl_init_device_get_info\" function\n\n");
 			break;
 		default:
 			// Прроизошло что-то непонятное, но подсчёт выделяемой информации не завершился успешно. Вывести соответствующее сообщение и вернуть управление.
-			printf("Unknown error\n\tProblem area: the \"cl_init_platform_get_info\" function\n\n");
+			printf("Unknown error\n\tProblem area: the \"cl_init_device_get_info\" function\n\n");
 			break;
 		}
 	}
@@ -306,7 +306,7 @@ void cl_init_device_get_info(cl_device_id device, cl_device_info info, const cha
 		// Выделяем память для хранения запрашиваемой информации
 		char* str = (char*)malloc(sizeof(char) * p_s);
 		if (str == NULL) {
-			printf("Memory allocation error for platform IDs.\n\tProblem area: the \"cl_init_get_array_platforms\" function.\n\n");
+			printf("Memory allocation error for platform IDs.\n\tProblem area: the \"cl_init_device_get_info\" function.\n\n");
 			return;
 		}
 		// Получаем и выводим запрашиваемую информацию
@@ -330,11 +330,11 @@ void cl_init_device_get_info(cl_device_id device, cl_device_info info, const cha
 			break;
 		case CL_OUT_OF_HOST_MEMORY:
 			// Выподает если происходит сбой в распределении ресурсов, требуемых реализацией OpenCL на хосте. Вывести соответствующее сообщение и вернуть управление.
-			printf("There was a failure in the allocation of resources required by the OpenCL implementation on the host\n\tProblem area: the \"cl_init_platform_get_info\" function\n\n");
+			printf("There was a failure in the allocation of resources required by the OpenCL implementation on the host\n\tProblem area: the \"cl_init_device_get_info\" function\n\n");
 			break;
 		default:
 			// Прроизошло что-то непонятное, но подсчёт выделяемой информации не завершился успешно. Вывести соответствующее сообщение и вернуть управление.
-			printf("Unknown error\n\tProblem area: the \"cl_init_platform_get_info\" function\n\n");
+			printf("Unknown error\n\tProblem area: the \"cl_init_device_get_info\" function\n\n");
 			break;
 		}
 		free(str);
@@ -388,11 +388,11 @@ void cl_init_device_get_info(cl_device_id device, cl_device_info info, const cha
 			break;
 		case CL_OUT_OF_HOST_MEMORY:
 			// Выподает если происходит сбой в распределении ресурсов, требуемых реализацией OpenCL на хосте. Вывести соответствующее сообщение и вернуть управление.
-			printf("There was a failure in the allocation of resources required by the OpenCL implementation on the host\n\tProblem area: the \"cl_init_platform_get_info\" function\n\n");
+			printf("There was a failure in the allocation of resources required by the OpenCL implementation on the host\n\tProblem area: the \"cl_init_device_get_info\" function\n\n");
 			break;
 		default:
 			// Прроизошло что-то непонятное, но подсчёт выделяемой информации не завершился успешно. Вывести соответствующее сообщение и вернуть управление.
-			printf("Unknown error\n\tProblem area: the \"cl_init_platform_get_info\" function\n\n");
+			printf("Unknown error\n\tProblem area: the \"cl_init_device_get_info\" function\n\n");
 			break;
 		}
 	}
@@ -435,6 +435,10 @@ cl_context cl_init_create_context_by_devices(cl_device_id* devices, cl_uint num_
 		// Не удается выделить ресурсы, требуемые реализацией OpenCL, на хосте.
 		printf("There is a failure to allocate resources required by the OpenCL implementation on the host.\n\tProblem area: the \"cl_init_context_by_devices\" function\n\n");
 		return NULL;
+	default:
+		// Прроизошло что-то непонятное Вывести соответствующее сообщение и вернуть управление.
+		printf("Unknown error\n\tProblem area: the \"cl_init_create_context_by_devices\" function\n\n");
+		return NULL;
 	// Остальные варианты на данный момент не реализованы 
 	}
 }
@@ -462,6 +466,82 @@ cl_context cl_init_create_context_by_device_type(cl_device_type type)
 		// Не удается выделить ресурсы, требуемые реализацией OpenCL, на хосте.
 		printf("There is a failure to allocate resources required by the OpenCL implementation on the host.\n\tProblem area: the \"cl_init_context_by_devices\" function\n\n");
 		return NULL;
+	default:
+		// Прроизошло что-то непонятное Вывести соответствующее сообщение и вернуть управление.
+		printf("Unknown error\n\tProblem area: the \"cl_init_create_context_by_devices\" function\n\n");
+		return NULL;
 		// Остальные варианты на данный момент не реализованы 
+	}
+}
+
+// Функция для получения и отображения строки информации о переданном контексте
+void cl_init_context_get_info(cl_context context, cl_context_info info, const char* title)
+{
+	size_t p_s;
+	switch (clGetContextInfo(context, info, 0, NULL, &p_s))
+	{
+	case CL_SUCCESS:
+		// Функция clGetPlatformInfo выполнена успешно, количество памяти, необходимой для нужной информации, посчитано. Нужно просто вернуться к выполнению функции.
+		break;
+	case CL_INVALID_CONTEXT:
+		// Выподает если переданный контекст не является доступным контекстом. Вывести соответствующее сообщение и вернуть управление.
+		printf("The transferred context is not a valid context.\n\tProblem area: the \"cl_init_context_get_info\" function\n\n");
+		return;
+	case CL_INVALID_VALUE:
+		// По идее на данном может выпасть если переданный тип получаемой информации не является одним из поддерживаемых значений. Вывести соответствующее сообщение и вернуть управление.
+		printf("The transmitted type of information received is not one of the supported values.\n\tProblem area: the \"cl_init_context_get_info\" function\n\n");
+		return;
+	case CL_OUT_OF_RESOURCES:
+		// Не удается выделить ресурсы, требуемые реализацией OpenCL на устройстве. Вывести соответствующее сообщение и вернуть управление.
+		printf("There is a failure to allocate resources required by the OpenCL implementation on the device.\n\tProblem area: the \"cl_init_context_get_info\" function\n\n");
+		return;
+	case CL_OUT_OF_HOST_MEMORY:
+		// Выподает если происходит сбой в распределении ресурсов, требуемых реализацией OpenCL на хосте. Вывести соответствующее сообщение и вернуть управление.
+		printf("There was a failure in the allocation of resources required by the OpenCL implementation on the host.\n\tProblem area: the \"cl_init_context_get_info\" function\n\n");
+		return;
+	default:
+		// Прроизошло что-то непонятное, но подсчёт выделяемой информации не завершился успешно. Вывести соответствующее сообщение и вернуть управление.
+		printf("Unknown error\n\tProblem area: the \"cl_init_context_get_info\" function\n\n");
+		return;
+	}
+	// Расхождение по принятому типу информации
+	switch (info)
+	{
+	case CL_CONTEXT_REFERENCE_COUNT:
+	case CL_CONTEXT_NUM_DEVICES:
+	{
+		cl_uint s;
+		// Получаем и выводим запрашиваемую информацию
+		switch (clGetContextInfo(context, info, p_s, &s, NULL))
+		{
+		case CL_SUCCESS:
+			// Функция clGetPlatformInfo выполнена успешно, запрашиваемая информация получена. Теперь определим тип запрашиваемой информации и выводим ей на экран.
+			printf("\t%s: %d\n", title, s);
+			break;
+		case CL_INVALID_CONTEXT:
+			// Выподает если переданный контекст не является доступным контекстом. Вывести соответствующее сообщение и вернуть управление.
+			printf("The transferred context is not a valid context.\n\tProblem area: the \"cl_init_context_get_info\" function\n\n");
+			break;
+		case CL_INVALID_VALUE:
+			// Тут много возможных причин. Вывести соответствующее сообщение и вернуть управление.
+			printf("\"info\" is not one of the supported values, or if the size in bytes specified by \"p_s\" is less than size of the return type specified in the Context Queries table and \"s\" is not NULL.\n");
+			printf("\tProblem area : the \"cl_init_context_get_info\" function\n\n");
+			break;
+		case CL_OUT_OF_RESOURCES:
+			// Не удается выделить ресурсы, требуемые реализацией OpenCL на устройстве. Вывести соответствующее сообщение и вернуть управление.
+			printf("There is a failure to allocate resources required by the OpenCL implementation on the device.\n\tProblem area: the \"cl_init_context_get_info\" function\n\n");
+			break;
+		case CL_OUT_OF_HOST_MEMORY:
+			// Выподает если происходит сбой в распределении ресурсов, требуемых реализацией OpenCL на хосте. Вывести соответствующее сообщение и вернуть управление.
+			printf("There was a failure in the allocation of resources required by the OpenCL implementation on the host\n\tProblem area: the \"cl_init_context_get_info\" function\n\n");
+			break;
+		default:
+			// Прроизошло что-то непонятное, но подсчёт выделяемой информации не завершился успешно. Вывести соответствующее сообщение и вернуть управление.
+			printf("Unknown error\n\tProblem area: the \"cl_init_context_get_info\" function\n\n");
+			break;
+		}
+	}
+	break;
+	// Остальные кейсы будут позже. Выявились проблемы при работе с массивами.
 	}
 }

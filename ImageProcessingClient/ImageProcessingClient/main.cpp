@@ -52,6 +52,7 @@ int main(void)
 	device = devices[0];
 	// Создание контекста
 	cl_context context = cl_init_create_context_by_devices(devices, num_devices);
+	cl_display_context_info_minimum(context);
 	//Создание очереди команд
 	cl_command_queue commandQueue = clCreateCommandQueue(context, device, 0, &err);
 	if (err != CL_SUCCESS) {
