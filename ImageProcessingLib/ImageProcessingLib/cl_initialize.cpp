@@ -397,7 +397,7 @@ void cl_init_device_get_info(cl_device_id device, cl_device_info info, const cha
 		}
 	}
 	break;
-	/*Сюда можно ещё накидать*/
+	/*Сюда можно ещё добавить*/
 	}
 }
 
@@ -452,7 +452,7 @@ cl_context cl_init_create_context_by_device_type(cl_device_type type)
 	switch (err)
 	{
 	case CL_SUCCESS:
-		// Контекст успешно создан. Просто вернуть значение (Во всех остальных случаях функция clCreateContext вернёт NULL
+		// Контекст успешно создан. Просто вернуть значение (Во всех остальных случаях функция clCreateContext вернёт NULL)
 		return context;
 	case CL_INVALID_DEVICE_TYPE:
 		// Переданный тип стройств не является допустимым.

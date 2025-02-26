@@ -54,7 +54,7 @@ void cl_display_arr_platforms_info_minimum(cl_platform_id* platforms, cl_uint pl
 		return;
 	}
 	printf("Number of transferred platforms: %d\n", platforms_count);
-	for (int i = 0; i < platforms_count; i++) {
+	for (cl_uint i = 0; i < platforms_count; i++) {
 		printf("[%d]:", i);
 		cl_init_platform_get_info(platforms[i], CL_PLATFORM_NAME, "Name");
 		cl_init_platform_get_info(platforms[i], CL_PLATFORM_VERSION, "Version");
@@ -71,7 +71,7 @@ void cl_display_arr_platforms_info_default(cl_platform_id* platforms, cl_uint pl
 		return;
 	}
 	printf("Number of transferred platforms: %d\n", platforms_count);
-	for (int i = 0; i < platforms_count; i++) {
+	for (cl_uint i = 0; i < platforms_count; i++) {
 		printf("[%d]:", i);
 		cl_init_platform_get_info(platforms[i], CL_PLATFORM_NAME, "Name");
 		cl_init_platform_get_info(platforms[i], CL_PLATFORM_VERSION, "Version");
@@ -89,7 +89,7 @@ void cl_display_arr_platforms_info_all(cl_platform_id* platforms, cl_uint platfo
 		return;
 	}
 	printf("Number of transferred platforms: %d\n", platforms_count);
-	for (int i = 0; i < platforms_count; i++) {
+	for (cl_uint i = 0; i < platforms_count; i++) {
 		printf("[%d]:", i);
 		cl_init_platform_get_info(platforms[i], CL_PLATFORM_NAME, "Name");
 		cl_init_platform_get_info(platforms[i], CL_PLATFORM_VERSION, "Version");
@@ -174,7 +174,7 @@ void cl_display_arr_devices_info_minimum(cl_device_id* devices, cl_uint devices_
 		return;
 	}
 	printf("Number of transferred devices: %d\n", devices_count);
-	for (int i = 0; i < devices_count; i++) {
+	for (cl_uint i = 0; i < devices_count; i++) {
 		printf("[%d]:", i);
 		cl_display_device_info_minimum(devices[i]);
 		printf("\n");
@@ -190,7 +190,7 @@ void cl_display_arr_devices_info_default(cl_device_id* devices, cl_uint devices_
 		return;
 	}
 	printf("Number of transferred devices: %d\n", devices_count);
-	for (int i = 0; i < devices_count; i++) {
+	for (cl_uint i = 0; i < devices_count; i++) {
 		printf("[%d]:", i);
 		cl_display_device_info_default(devices[i]);
 		printf("\n");
@@ -206,7 +206,7 @@ void cl_display_arr_devices_info_all(cl_device_id* devices, cl_uint devices_coun
 		return;
 	}
 	printf("Number of transferred devices: %d\n", devices_count);
-	for (int i = 0; i < devices_count; i++) {
+	for (cl_uint i = 0; i < devices_count; i++) {
 		printf("[%d]:", i);
 		cl_display_device_info_all(devices[i]);
 		printf("\n");
@@ -237,77 +237,9 @@ void cl_display_arr_contexts_info_minimum(cl_context* contexts, cl_uint contexts
 		return;
 	}
 	printf("Number of transferred contexts: %d\n", contexts_count);
-	for (int i = 0; i < contexts_count; i++) {
+	for (cl_uint i = 0; i < contexts_count; i++) {
 		printf("[%d]:", i);
 		cl_display_context_info_minimum(contexts[i]);
 		printf("\n");
 	}
-}
-
-///////////////////////////////////////////// Очередь команд /////////////////////////////////////////////
-
-cl_command_queue ipGetComQueueToDevice(cl_context ctx, cl_device_id dev)
-{
-	cl_command_queue res = clCreateCommandQueue(ctx, dev, NULL, NULL);
-	return res;
-}
-
-///////////////////////////////////////////// Работа с кодом ядер /////////////////////////////////////////////
-
-cl_program ipGetProgram(cl_context ctx, const char filename[])
-{
-	FILE* fp;
-	size_t source_size;
-	char* source_str;
-	try {
-		fopen_s(&fp, filename, "r");
-		if (!fp) {
-			fprintf(stderr, "Failed to load kernel.\n");
-			exit(1);
-		}
-		source_str = (char*)malloc(512);
-		source_size = fread(source_str, 1, 512, fp);
-		fclose(fp);
-	}
-	catch (int a) {
-		printf("%d", a);
-	}
-	cl_program res = clCreateProgramWithSource(ctx, 1, (const char**)&source_str, (const size_t*)&source_size, NULL);
-	return res;
-}
-
-cl_int ipBuildProgram(cl_program prg, cl_device_id* devs)
-{
-	cl_int res;
-	cl_uint count_devs = sizeof(devs) / sizeof(cl_device_id);
-	res = clBuildProgram(prg, count_devs, devs, NULL, NULL, NULL);
-	for (int i = 0; i < count_devs; i++)
-	{
-		size_t log_size, dev_size;
-		char* log;
-		clGetProgramBuildInfo(prg, devs[i], CL_PROGRAM_BUILD_LOG, 0, NULL, &log_size);
-		log = (char*)malloc(log_size);
-		clGetProgramBuildInfo(prg, devs[i], CL_PROGRAM_BUILD_LOG, log_size, log, NULL);
-		printf("\n  > Program Build Log: %s\n", log);
-	}
-	printf("\n");
-	return res;
-}
-
-cl_kernel ipGetKernel(cl_program prg, const char* name)
-{
-	cl_kernel res = clCreateKernel(prg, name, NULL);
-	return res;
-}
-
-cl_int ipSetKernelParam(cl_kernel krn, cl_uint param_idx, size_t param_size, const void* param)
-{
-	cl_int res = clSetKernelArg(krn, param_idx, param_size, param);
-	return res;
-}
-
-cl_int ipWorkKernel(cl_kernel krn, cl_command_queue que, cl_uint dim, const size_t* gws)
-{
-	cl_int res = clEnqueueNDRangeKernel(que, krn, dim, NULL, gws, NULL, 0, NULL, NULL);
-	return res;
 }
