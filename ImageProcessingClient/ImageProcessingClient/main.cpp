@@ -21,7 +21,8 @@ int main(void)
 	// Работа с изображением
 	const char* fileName = "cat.jpg";
 	unsigned int width, height;
-	char* buffer = CreateBufferFromImage(fileName, width, height);
+	AddPulseNoiseToImage("cat.jpg", 0.01, 0.01);
+	char* buffer = CreateBufferFromImage("cat-noisy.png", width, height);
 
 	cl_image_format clImageFormat;
 	clImageFormat.image_channel_order = CL_RGBA;

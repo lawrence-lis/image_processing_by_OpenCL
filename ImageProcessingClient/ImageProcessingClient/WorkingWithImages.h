@@ -13,3 +13,9 @@ void FreeImageErrorHandler(FREE_IMAGE_FORMAT fif, const char* message);
 
 /* Функция для создания буфера из изображения. */
 char* CreateBufferFromImage(const char* src_file_name, unsigned int& width, unsigned int& height);
+
+// Функция для добавления импульсного шума на RGB изображение
+void addSaltAndPepperNoiseRGB(FIBITMAP* image, double saltProbability, double pepperProbability);
+
+// Функция для добавления импульсного шума на RGB изображение (работа непосредственно с файлом)
+void AddPulseNoiseToImage(const char* src_file_name, double salt, double pepper);
