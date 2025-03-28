@@ -1,13 +1,34 @@
-
-/ImageProcessingLib/x64
-/ImageProcessingLib/ImageProcessingLib/x64
-/ImageProcessingLib/ImageProcessingLib/Debug
-/ImageProcessingLib/.vs/ImageProcessingLib/v16
-*.vcxproj
-*.filters
+# Visual Studio files
+*.suo
 *.user
-*.sln
-/ImageProcessingClient/x64
-/ImageProcessingClient/ImageProcessingClient/x64
-/ImageProcessingClient/ImageProcessingClient/Debug
-/ImageProcessingClient/.vs/ImageProcessingClient/v16
+*.vcxproj.user
+*.sln.docstates
+*.cache
+*.VC.db
+*.opendb
+*.opensdf
+*.sdf
+*.jmc
+*.log
+*.dll.recipe
+
+# Build results
+Debug/
+Release/
+x64/
+*.exe
+*.dll
+*.pdb
+*.ilk
+*.obj
+*.lib
+*.tlog
+*.idb
+*.pch
+
+# Other
+.vs/
+/MFCApplicationClient/.vs
+*.ipch
+*.aps
+/ImageProcessingLib/ImageProcessingLib/Kernels

@@ -104,7 +104,7 @@ cl_mem cl_runtime_create_image(cl_context context, cl_mem_flags flags, cl_image_
 // Функция, создающая объект изображения из исходных данных, только для чтения
 cl_mem cl_runtime_create_image_for_reading(cl_context context, cl_image_format* format, size_t w, size_t h, void* hp, size_t rp)
 {
-    return cl_runtime_create_image(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, format, w, h, hp, rp);
+    return cl_runtime_create_image(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, format, w, h, hp, rp);
 }
 
 //Функция для создания объекта выходного изображения, который сохранит результат выполнения обработки входного изображения.
@@ -420,7 +420,7 @@ cl_int cl_runtime_enqueue_kernel(cl_kernel kernel, cl_command_queue queue, cl_ui
     switch (clEnqueueNDRangeKernel(queue, kernel, dim, NULL, gws, lws, 0, NULL, NULL))
     {
     case CL_SUCCESS:
-        // Программа успешно создана.
+        // Ядро успешно запущено.
         return 0;
     case CL_INVALID_PROGRAM_EXECUTABLE:
         // Нет ни одного успешно созданного исполняемого файла программы, доступного для устройства, связанного с command_queue.
