@@ -17,4 +17,6 @@
 #include "cl_initialize.h"
 #include "cl_runtime.h"
 
-extern "C" PROCESSINGLIBRARY_API bool medianFilter(BYTE * inputPixels, BYTE * outputPixels, int ImageWidth, int ImageHeight, int ImageChannels, int kernelSize, cl_command_queue commandQueue, cl_kernel kernel, cl_context context, cl_sampler sampler);
+extern "C" PROCESSINGLIBRARY_API bool medianFilter(BYTE * inputPixels, BYTE * outputPixels, int ImageWidth, int ImageHeight, int ImageChannels, int kernelSize, cl_command_queue commandQueue, cl_kernel kernel, cl_context context, cl_sampler sampler, cl_ulong * dur);
+
+extern "C" PROCESSINGLIBRARY_API bool gaussianBlurFilter(BYTE * inputPixels, BYTE * outputPixels, int ImageWidth, int ImageHeight, int ImageChannels, cl_command_queue commandQueue, cl_kernel kernel, cl_context context, cl_sampler sampler, cl_ulong * dur);

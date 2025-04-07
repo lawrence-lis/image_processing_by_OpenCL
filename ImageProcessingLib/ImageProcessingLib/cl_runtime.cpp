@@ -10,7 +10,7 @@ cl_command_queue cl_runtime_create_command_queue(cl_context context, cl_device_i
 {
     cl_command_queue queue;
     cl_int err;
-    queue = clCreateCommandQueue(context, device, NULL, &err);
+    queue = clCreateCommandQueue(context, device, CL_QUEUE_PROFILING_ENABLE, &err);
     switch (err)
     {
     case CL_SUCCESS:
@@ -253,7 +253,21 @@ cl_program cl_runtime_create_program_from_file(cl_context context, const char* f
 // Функция для создания (компиляция и компановка) исполняемого файла программы ядра
 cl_int cl_runtime_build_program(cl_program program, cl_device_id device, const char* options)
 {
-    switch (clBuildProgram(program, 1, &device, options, NULL, NULL))
+    // Определяем размер лога
+    size_t log_size;
+    clGetProgramBuildInfo(program, device, CL_PROGRAM_BUILD_LOG, 0, NULL, &log_size);
+    // Выделяем память для лога
+    char* log = (char*)malloc(log_size);
+    if (!log) {
+        printf("Error: Could not allocate memory for build log.\n");
+        return -1;
+    }
+    // Получаем лог
+    clGetProgramBuildInfo(program, device, CL_PROGRAM_BUILD_LOG, log_size, log, NULL);
+    free(log);
+
+    cl_int res = clBuildProgram(program, 1, &device, options, NULL, NULL);
+    switch (res)
     {
     case CL_SUCCESS:
         // Программа успешно создана.
@@ -415,37 +429,54 @@ cl_int cl_runtime_set_kernel_param(cl_kernel kernel, cl_uint param_idx, size_t p
 }
 
 // Функция для работы с ядром, а именно: запуск оного
-cl_int cl_runtime_enqueue_kernel(cl_kernel kernel, cl_command_queue queue, cl_uint dim, const size_t* gws, const size_t* lws)
+cl_int cl_runtime_enqueue_kernel(cl_kernel kernel, cl_command_queue queue, cl_uint dim, const size_t* gws, const size_t* lws, cl_ulong* dur)
 {
-    switch (clEnqueueNDRangeKernel(queue, kernel, dim, NULL, gws, lws, 0, NULL, NULL))
+    cl_event event;
+    switch (clEnqueueNDRangeKernel(queue, kernel, dim, NULL, gws, lws, 0, NULL, &event))
     {
+        cl_int sub_err;
     case CL_SUCCESS:
         // Ядро успешно запущено.
+        sub_err = clWaitForEvents(1, &event);
+
+        cl_ulong start_time, end_time;
+        sub_err = clGetEventProfilingInfo(event, CL_PROFILING_COMMAND_START, sizeof(cl_ulong), &start_time, NULL);
+        sub_err = clGetEventProfilingInfo(event, CL_PROFILING_COMMAND_END, sizeof(cl_ulong), &end_time, NULL);
+
+        *dur = (end_time - start_time);
+
+        clReleaseEvent(event);
         return 0;
     case CL_INVALID_PROGRAM_EXECUTABLE:
         // Нет ни одного успешно созданного исполняемого файла программы, доступного для устройства, связанного с command_queue.
         printf("There is no successfully built program executable available for device associated with \"queue\".\n\tProblem area: the \"cl_runtime_enqueue_kernel\" function\n\n");
+        clReleaseEvent(event);
         return -1;
     case CL_INVALID_COMMAND_QUEUE:
         // command_queue не является допустимой командной очередью хоста.
         printf("\"queue\" is not a valid host command-queue.\n\tProblem area: the \"cl_runtime_enqueue_kernel\" function\n\n");
+        clReleaseEvent(event);
         return -1;
     case CL_INVALID_KERNEL:
         // ядро не является допустимым объектом ядра.
         printf("\"kernel\" is not a valid kernel object.\n\tProblem area: the \"cl_runtime_enqueue_kernel\" function\n\n");
+        clReleaseEvent(event);
         return -1;
     case CL_INVALID_CONTEXT:
         // Контекст, связанный с command_queue, и ядро не совпадают, или если контекст, связанный с command_queue, и события в event_wait_list не совпадают.
         printf("Context associated with command_queue and kernel are not the same or if the context associated with command_queue and events in event_wait_list are not the same.");
         printf("\n\tProblem area : the \"cl_runtime_enqueue_kernel\" function\n\n");
+        clReleaseEvent(event);
         return -1;
     case CL_INVALID_KERNEL_ARGS:
         // значения аргументов ядра не были указаны.
         printf("The kernel argument values have not been specified.\n\tProblem area: the \"cl_runtime_enqueue_kernel\" function\n\n");
+        clReleaseEvent(event);
         return -1;
     case CL_INVALID_WORK_DIMENSION:
         // dim не является допустимым значением (т. Е. Значением между 1 и CL_DEVICE_MAX_WORK_ITEM_DIMENSIONS).
         printf("\"dim\" is not a valid value (i.e. a value between 1 and CL_DEVICE_MAX_WORK_ITEM_DIMENSIONS).\n\tProblem area: the \"cl_runtime_enqueue_kernel\" function\n\n");
+        clReleaseEvent(event);
         return -1;
     case CL_INVALID_GLOBAL_WORK_SIZE:
         // gws равен NULL или если какое-либо из значений, указанных в global_work_size[0], ...global_work_size[work_dim - 1] равно 0.
@@ -454,12 +485,14 @@ cl_int cl_runtime_enqueue_kernel(cl_kernel kernel, cl_command_queue queue, cl_ui
         printf("\"gws\" is NULL or if any of the values specified in gws[0], ... ​gws[dim - 1] are 0. Or any of the values specified in gws[0], ... gws[dim - 1] exceed the maximum value representable by size_t on the device\n");
         printf(" on which the kernel-instance will be enqueued.");
         printf("\n\tProblem area : the \"cl_runtime_enqueue_kernel\" function\n\n");
+        clReleaseEvent(event);
         return -1;
     case CL_INVALID_GLOBAL_OFFSET:
         // Значение, указанное в gws + соответствующие значения в global_work_offset для любых измерений, больше максимального значения, представимого размером t на устройстве, на котором экземпляр ядра будет 
         // помещен в очередь, или если значение global_work_offset отличалось от NULL до версии 1.1.
         printf("The value specified in \"gws\" + the corresponding values in global_work_offset for any dimensions is greater than the maximum value representable by size t on the device on which the kernel-instance will");
         printf(" be enqueued, or if global_work_offset is non-NULL before version 1.1.\n\tProblem area: the \"cl_runtime_enqueue_kernel\" function\n\n");
+        clReleaseEvent(event);
         return -1;
     case CL_INVALID_WORK_GROUP_SIZE:
         // указан lws, который не соответствует требуемому размеру рабочей группы для ядра в исходном коде программы. Или указан lws, который не соответствует требуемому количеству подгрупп для ядра в исходном коде программы.
@@ -469,31 +502,37 @@ cl_int cl_runtime_enqueue_kernel(cl_kernel kernel, cl_command_queue queue, cl_ui
         printf("program source. Or \"lws\" is specified and the total number of work-items in the work-group computed as lws[0] × …​ lws[dim - 1] is greater than the value specified by CL_KERNEL_WORK_GROUP_SIZE in the Kernel ");
         printf("Object Device Queries table. Or the work-group size must be uniform and the \"lws\" is not NULL, is not equal to the required work-group size specified in the kernel source, or the \"gws\" is not evenly ");
         printf("divisible by the local_work_size.\n\tProblem area : the \"cl_runtime_enqueue_kernel\" function\n\n");
+        clReleaseEvent(event);
         return -1;
     case CL_INVALID_WORK_ITEM_SIZE:
         // количество рабочих элементов, указанное в любом из lws[0], ... lws[dim - 1], больше соответствующих значений, указанных в CL_DEVICE_MAX_WORK_ITEM_SIZES[0], ..., CL_DEVICE_MAX_WORK_ITEM_SIZES[dim - 1].
         printf("The number of work-items specified in any of lws[0], …​ lws[dim - 1] is greater than the corresponding values specified by CL_DEVICE_MAX_WORK_ITEM_SIZES[0], …​, CL_DEVICE_MAX_WORK_ITEM_SIZES[dim - 1].");
         printf("\n\tProblem area : the \"cl_runtime_enqueue_kernel\" function\n\n");
+        clReleaseEvent(event);
         return -1;
     case CL_MISALIGNED_SUB_BUFFER_OFFSET:
         // объект суббуфера указывается в качестве значения для аргумента, который является объектом буфера, и смещение, указанное при создании объекта суббуфера, не выровнено по значению CL_DEVICE_MEM_BASE_ADDR_ALIGN для 
         // устройства, связанного с очередью.
         printf("A sub-buffer object is specified as the value for an argument that is a buffer object and the offset specified when the sub-buffer object is created is not aligned to CL_DEVICE_MEM_BASE_ADDR_ALIGN value for");
         printf(" device associated with queue.\n\tProblem area : the \"cl_runtime_enqueue_kernel\" function\n\n");
+        clReleaseEvent(event);
         return -1;
     case CL_INVALID_IMAGE_SIZE:
         // объект изображения указывается в качестве значения аргумента, а размеры изображения (ширина изображения, высота, указанная или вычисляемая строка и / или шаг среза) не поддерживаются устройством, связанным с queue.
         printf("An image object is specified as an argument value and the image dimensions (image width, height, specified or compute row and/or slice pitch) are not supported by device associated with \"queue\".");
         printf("\n\tProblem area : the \"cl_runtime_enqueue_kernel\" function\n\n");
+        clReleaseEvent(event);
         return -1;
     case CL_IMAGE_FORMAT_NOT_SUPPORTED:
         // Объект изображения указан в качестве значения аргумента, а формат изображения (порядок каналов изображения и тип данных) не поддерживается устройством, связанным с очередью.
         printf("An image object is specified as an argument value and the image format (image channel order and data type) is not supported by device associated with \"queue\"."); 
         printf("\n\tProblem area : the \"cl_runtime_enqueue_kernel\" function\n\n");
+        clReleaseEvent(event);
         return -1;
     case CL_MEM_OBJECT_ALLOCATION_FAILURE:
         // Не удается выделить память для хранилища данных, связанного с объектами изображения или буфера, указанными в качестве аргументов ядра.
         printf("There is a failure to allocate memory for data store associated with image or buffer objects specified as arguments to \"kernel\".\n\tProblem area: the \"cl_runtime_enqueue_kernel\" function\n\n");
+        clReleaseEvent(event);
         return -1;
     case CL_OUT_OF_RESOURCES:
         // Не удается поставить экземпляр выполнения kernel в очередь команд из-за нехватки ресурсов, необходимых для выполнения ядра. Например, явно указанный lws вызывает сбой при выполнении ядра из-за нехватки ресурсов, 
@@ -505,14 +544,17 @@ cl_int cl_runtime_enqueue_kernel(cl_kernel kernel, cl_command_queue queue, cl_ui
         printf("CL_DEVICE_MAX_READ_IMAGE_ARGS value for device or the number of write - only and read - write image args used in kernel exceed the CL_DEVICE_MAX_READ_WRITE_IMAGE_ARGS value for device or the number of ");
         printf("samplers used in kernel exceed CL_DEVICE_MAX_SAMPLERS for device.There is a failure to allocate resources required by the OpenCL implementation on the device.");
         printf("\n\tProblem area : the \"cl_runtime_set_kernel_param\" function\n\n");
+        clReleaseEvent(event);
         return -1;
     case CL_OUT_OF_HOST_MEMORY:
         // Не удается выделить ресурсы, требуемые реализацией OpenCL, на хосте.
         printf("There is a failure to allocate resources required by the OpenCL implementation on the host.\n\tProblem area: the \"cl_runtime_set_kernel_param\" function\n\n");
+        clReleaseEvent(event);
         return -1;
     default:
         // Произошло что-то непонятное. Вывести соответствующее сообщение и вернуть управление.
         printf("Unknown error.\n\tProblem area: the \"cl_runtime_set_kernel_param\" function\n\n");
+        clReleaseEvent(event);
         return -1;
         // Есть ещё варианты для обработки. Но в данной реализации они не учитываются
     }

@@ -4,6 +4,7 @@
 
 #pragma once
 #include "CL/cl.h"
+#include <vector>
 
 
 // Диалоговое окно CMFCApplicationClientDlg
@@ -15,25 +16,36 @@ private:
 	Bitmap* m_pInputImage;
 	Bitmap* m_pOutputImage;
 
-	int m_nFilterSize;
+	CListBox m_pPlatformListBox; // Для платформ
+	CListBox m_pDeviceListBox; // Для устройств
+
+	float m_nMeanNoise;
+	float m_nStdDevNoise;
+	int m_nMedianFilterSize;
 
 	CString m_originalImageFilePath;
+	CString m_pOpenCLInitStatus;
+	CString m_pProcessingDuration;
+	CString platformInfo, deviceInfo;
 
 	bool toRewrite;										// Переписывать ли Picture Controle
 
-	cl_platform_id platformId;
-	cl_device_id deviceId;
+	cl_platform_id* platforms;							// Массив всех доступных платформ
+	cl_platform_id platformId;							// Идентификатор выбранной пользователем платформы OpenCL
+	cl_device_id* devices;								// Массив всех доступных устройств
+	cl_uint numDevices;									// Количество выбранных пользователем устройств
+	cl_device_id deviceId;								// Идентификатор выбранного пользователем устройства OpenCL
 	cl_context context;
 	cl_command_queue commandQueue;
 	cl_kernel kernel;
 	cl_sampler sampler;
-	bool openCLInitialized;
 
 	void DisplayImageInPictureControl(Bitmap* image, int pictureControlID);			// Для отображения нового изображения в объекте Picture Control
 	void ApplyImpulseNoise(Bitmap& source, Bitmap& destination, double noiseProbability);		// Для наложения импульсного шума
-	bool SaveBitmapToFile(Bitmap& bitmap, const CString& sourceFilePath, const CString& appendedPartName);		// Для сохранения изображения в файл
+	void ApplyGaussianNoise(Bitmap& source, Bitmap& destination, double mean, double stddev);		// Для наложения гауссового шума
+	bool SaveBitmapToFile(Bitmap& bitmap, CString& sourceFilePath, const CString& appendedPartName);		// Для сохранения изображения в файл
 	Status GetEncoderClsid(const WCHAR* format, CLSID* pClsid);		// Вспомогательная функция для получения расширения файла изображения (Там немного мороки, но наверное это можно как-то заменить)
-	void SplitPath(const CString& filePath, CString& folderPath, CString& fileName, CString& fileExt);		// Вспомогательная функция для разделения пути файла на части
+	void SplitPath(CString& filePath, CString& folderPath, CString& fileName, CString& fileExt);		// Вспомогательная функция для разделения пути файла на части
 
 	// Создание
 public:
@@ -65,4 +77,12 @@ public:
 	afx_msg void OnBnClickedButtonAddNoise();
 	afx_msg void OnBnClickedButtonMedianFiltering();
 	afx_msg void OnEnChangeEditMeadianFilterSize();
+	afx_msg void OnLbnSelchangePlatformsList();
+	afx_msg void OnLbnSelchangeDevicesList();
+	afx_msg void OnBnClickedButtonApplyGaussianNoise();
+	afx_msg void OnEnChangeEditMeanGaussianNoise();
+	afx_msg void OnEnChangeEditStddevGaussianNoise();
+	afx_msg void OnBnClickedButtonGaussianBlurFilter();
+	afx_msg void OnBnClickedButtonMedianFilteringCpu();
+	afx_msg void OnBnClickedButtonGaussianBlurFilterCpu();
 };

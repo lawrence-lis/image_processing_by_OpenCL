@@ -110,5 +110,6 @@ extern "C" PROCESSINGLIBRARY_API cl_int cl_runtime_set_kernel_param(cl_kernel ke
 	  * queue - очередь команд
 	  * dim - количество измерений рабочего размера
 	  * qws - глобальный рабочий размер
-	  * lws - локальный рабочий размер*/
-extern "C" PROCESSINGLIBRARY_API cl_int cl_runtime_enqueue_kernel(cl_kernel kernel, cl_command_queue queue, cl_uint dim, const size_t * gws, const size_t * lws);
+	  * lws - локальный рабочий размер
+	  * dur - указатель на переменную, куда будет записано время, затраченное на выполнение функции*/
+extern "C" PROCESSINGLIBRARY_API cl_int cl_runtime_enqueue_kernel(cl_kernel kernel, cl_command_queue queue, cl_uint dim, const size_t * gws, const size_t * lws, cl_ulong * dur);

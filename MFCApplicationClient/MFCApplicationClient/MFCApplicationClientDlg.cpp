@@ -7,13 +7,16 @@
 #include "MFCApplicationClient.h"
 #include "MFCApplicationClientDlg.h"
 #include "afxdialogex.h"
+
+#include <ctime>
+#include <exception>
+
 #include "ProcessingLib.h"
 #include "cl_initialize.h"
 #include "cl_runtime.h"
 #include "LibFilters.h"
-#include <cstdlib>
-#include <ctime>
-#include <exception>
+
+#include "CPU_Filtering.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -22,7 +25,7 @@
 IMPLEMENT_DYNAMIC(CMFCApplicationClientDlg, CDialogEx)
 
 // Диалоговое окно CMFCApplicationClientDlg
-
+#define M_PI 3.14159265358979323846
 
 
 CMFCApplicationClientDlg::CMFCApplicationClientDlg(CWnd* pParent /*=nullptr*/)
@@ -30,14 +33,18 @@ CMFCApplicationClientDlg::CMFCApplicationClientDlg(CWnd* pParent /*=nullptr*/)
 	m_pInputImage(nullptr),
 	m_pOutputImage(nullptr),
 	toRewrite(true),
+	platforms(NULL),
 	platformId(NULL),
+	devices(NULL),
+	numDevices(0),
 	deviceId(NULL),
 	context(NULL),
 	commandQueue(NULL),
 	kernel(NULL),
 	sampler(NULL),
-	openCLInitialized(false),
-	m_nFilterSize(3)
+	m_nMeanNoise(0),
+	m_nStdDevNoise(30),
+	m_nMedianFilterSize(3)
 {
 	m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
 }
@@ -45,7 +52,9 @@ CMFCApplicationClientDlg::CMFCApplicationClientDlg(CWnd* pParent /*=nullptr*/)
 void CMFCApplicationClientDlg::DoDataExchange(CDataExchange* pDX)
 {
 	CDialogEx::DoDataExchange(pDX);
-	DDX_Text(pDX, IDC_EDIT_MEADIAN_FILTER_SIZE, m_nFilterSize);
+	DDX_Text(pDX, IDC_EDIT_MEAN_GAUSSIAN_NOISE, m_nMeanNoise);
+	DDX_Text(pDX, IDC_EDIT_STDDEV_GAUSSIAN_NOISE, m_nStdDevNoise);
+	DDX_Text(pDX, IDC_EDIT_MEDIAN_FILTER_SIZE, m_nMedianFilterSize);
 }
 
 BEGIN_MESSAGE_MAP(CMFCApplicationClientDlg, CDialogEx)
@@ -54,8 +63,16 @@ BEGIN_MESSAGE_MAP(CMFCApplicationClientDlg, CDialogEx)
 	ON_BN_CLICKED(IDC_BUTTON_LOAD_IMAGE, &CMFCApplicationClientDlg::OnBnClickedButtonLoadImage)
 	ON_WM_SIZE()
 	ON_BN_CLICKED(IDC_BUTTON_ADD_NOISE, &CMFCApplicationClientDlg::OnBnClickedButtonAddNoise)
-	ON_BN_CLICKED(IDC_BUTTON_MEDIAN_FILTERING, &CMFCApplicationClientDlg::OnBnClickedButtonMedianFiltering)
+	ON_BN_CLICKED(IDC_BUTTON_MEDIAN_FILTERING_GPU, &CMFCApplicationClientDlg::OnBnClickedButtonMedianFiltering)
 	ON_EN_CHANGE(IDC_EDIT_MEADIAN_FILTER_SIZE, &CMFCApplicationClientDlg::OnEnChangeEditMeadianFilterSize)
+	ON_LBN_SELCHANGE(IDC_PLATFORMS_LIST, &CMFCApplicationClientDlg::OnLbnSelchangePlatformsList)
+	ON_LBN_SELCHANGE(IDC_DEVICES_LIST, &CMFCApplicationClientDlg::OnLbnSelchangeDevicesList)
+	ON_BN_CLICKED(IDC_BUTTON_APPLY_GAUSSIAN_NOISE, &CMFCApplicationClientDlg::OnBnClickedButtonApplyGaussianNoise)
+	ON_EN_CHANGE(IDC_EDIT_MEAN_GAUSSIAN_NOISE, &CMFCApplicationClientDlg::OnEnChangeEditMeanGaussianNoise)
+	ON_EN_CHANGE(IDC_EDIT_STDDEV_GAUSSIAN_NOISE, &CMFCApplicationClientDlg::OnEnChangeEditStddevGaussianNoise)
+	ON_BN_CLICKED(IDC_BUTTON_GAUSSIAN_BLUR_FILTER_GPU, &CMFCApplicationClientDlg::OnBnClickedButtonGaussianBlurFilter)
+	ON_BN_CLICKED(IDC_BUTTON_MEDIAN_FILTERING_CPU, &CMFCApplicationClientDlg::OnBnClickedButtonMedianFilteringCpu)
+	ON_BN_CLICKED(IDC_BUTTON_GAUSSIAN_BLUR_FILTER_CPU, &CMFCApplicationClientDlg::OnBnClickedButtonGaussianBlurFilterCpu)
 END_MESSAGE_MAP()
 
 
@@ -74,6 +91,23 @@ BOOL CMFCApplicationClientDlg::OnInitDialog()
 	srand(time(0));
 	m_pInputImage = nullptr;
 	m_pOutputImage = nullptr;
+	m_pPlatformListBox.SubclassDlgItem(IDC_PLATFORMS_LIST, this);
+	m_pDeviceListBox.SubclassDlgItem(IDC_DEVICES_LIST, this);
+
+	// Первичная инициализация OpenCL
+	// Получение платформ
+	cl_uint numPlatforms = cl_init_get_num_platforms();
+	platforms = cl_init_get_array_platforms(numPlatforms);
+	// Отображение платформ (Тут бы, по идее, использовать функцию библиотеки, но на данный момент такая идея не реализована, а времени её разрабатывать уже нет)
+	for (int i = 0; i < numPlatforms; i++)
+	{
+		size_t size;
+		clGetPlatformInfo(platforms[i], CL_PLATFORM_NAME, 0, nullptr, &size);
+		std::vector<char> buffer(size);
+		clGetPlatformInfo(platforms[i], CL_PLATFORM_NAME, size, buffer.data(), nullptr);
+		CString platformName(buffer.data());
+		m_pPlatformListBox.AddString(platformName);
+	}
 
 	return TRUE;  // возврат значения TRUE, если фокус не передан элементу управления
 }
@@ -118,6 +152,8 @@ HCURSOR CMFCApplicationClientDlg::OnQueryDragIcon()
 
 CMFCApplicationClientDlg::~CMFCApplicationClientDlg()
 {
+	free(platforms);
+	free(devices);
 	delete m_pInputImage;
 	m_pOutputImage = nullptr;
 }
@@ -133,6 +169,7 @@ void CMFCApplicationClientDlg::OnBnClickedButtonLoadImage()
 
 		// Загружаем изображение в m_pInputImage
 		delete m_pInputImage;	// Освобождение предыдущего изображения
+		if(m_pOutputImage != nullptr) m_pOutputImage = nullptr;;
 		m_pInputImage = Bitmap::FromFile(filePath);
 
 		// Проверка на ошибки после создания Bitmap
@@ -145,6 +182,7 @@ void CMFCApplicationClientDlg::OnBnClickedButtonLoadImage()
 
 		DisplayImageInPictureControl(m_pInputImage, IDC_INPUT_IMAGE);
 	}
+	toRewrite = true;
 }
 
 
@@ -190,7 +228,7 @@ void CMFCApplicationClientDlg::OnBnClickedButtonAddNoise()
 	DisplayImageInPictureControl(m_pOutputImage, IDC_OUTPUT_IMAGE);
 
 	// Сохранить изображение в файл
-	SaveBitmapToFile(*m_pOutputImage, m_originalImageFilePath, L"-Noisy");
+	SaveBitmapToFile(*m_pOutputImage, m_originalImageFilePath, L"-Pulse_Noisy");
 }
 
 void CMFCApplicationClientDlg::DisplayImageInPictureControl(Bitmap* image, int pictureControlID)
@@ -287,14 +325,16 @@ void CMFCApplicationClientDlg::ApplyImpulseNoise(Bitmap& source, Bitmap& destina
 }
 
 
-bool CMFCApplicationClientDlg::SaveBitmapToFile(Bitmap& bitmap, const CString& sourceFilePath, const CString& appendedPartName)
+bool CMFCApplicationClientDlg::SaveBitmapToFile(Bitmap& bitmap, CString& sourceFilePath, const CString& appendedPartName)
 {
 	// 1. Получаем информацию об исходном файле
 	CString folderPath, fileName, fileExt;
 	SplitPath(sourceFilePath, folderPath, fileName, fileExt);
 
+	sourceFilePath = folderPath + L"\\" + fileName + appendedPartName + fileExt;
+
 	// 2. Создаем новое имя файла
-	CString newFileName = folderPath + L"\\" + fileName + appendedPartName + fileExt;
+	CString newFileName = sourceFilePath;
 
 	// 3. Определяем формат файла (CLSID энкодера)
 	CLSID encoderClsid;
@@ -376,7 +416,7 @@ Status CMFCApplicationClientDlg::GetEncoderClsid(const WCHAR* format, CLSID* pCl
 	return GenericError;
 }
 
-void CMFCApplicationClientDlg::SplitPath(const CString& filePath, CString& folderPath, CString& fileName, CString& fileExt)
+void CMFCApplicationClientDlg::SplitPath(CString& filePath, CString& folderPath, CString& fileName, CString& fileExt)
 {
 	int lastSlash = filePath.ReverseFind(L'\\');
 	if (lastSlash != -1)
@@ -414,41 +454,37 @@ void CMFCApplicationClientDlg::OnBnClickedButtonMedianFiltering()
 		toRewrite = false;
 	}
 
-	// Инициализируем OpenCL
-	if (!openCLInitialized)
+	// Массив платформ инициализируется при запуске приложения. Тут обрабатыается только тот случай, когда клиент не выбрал платформу
+	if (platformId == NULL) platformId = platforms[0];
+
+	if (devices == NULL)
 	{
-		cl_uint numPlatforms = cl_init_get_num_platforms();
-		cl_platform_id* platforms = cl_init_get_array_platforms(numPlatforms);
-		platformId = platforms[0];
-		delete[] platforms;
-
-		cl_uint numDevices = cl_init_get_num_devices(platformId);
-		cl_device_id* devices = cl_init_get_array_devices(platformId, CL_DEVICE_TYPE_GPU, numDevices);
-		deviceId = devices[0];
-
-		context = cl_init_create_context_by_devices(devices, numDevices);
-
-		commandQueue = cl_runtime_create_command_queue(context, deviceId);
-
-		// Проверка, поддерживается ли изображения устройством, в противном случае - приложение прекратит свою работу
-		cl_bool imageSupport = CL_FALSE;
-		clGetDeviceInfo(deviceId, CL_DEVICE_IMAGE_SUPPORT, sizeof(cl_bool), &imageSupport, NULL);
-		if (imageSupport != CL_TRUE)
-		{
-			printf("OpenCL device does not support images.\n");
-			exit(1);
-		}
-
-		sampler = cl_runtime_create_sampler(context);
-
-		cl_program program_meidan = cl_runtime_create_program_from_file(context, "Kernels/Median_Filter.cl");
-		if (cl_runtime_build_program(program_meidan, deviceId, NULL) == -1)
-			exit(-1);
-		int filter_size = 3;
-
-		kernel = cl_runtime_create_kernel(program_meidan, "median_filter");
-		openCLInitialized = true;
+		numDevices = cl_init_get_num_devices(platformId);
+		devices = cl_init_get_array_devices(platformId, CL_DEVICE_TYPE_GPU, numDevices);
 	}
+
+	if (deviceId == NULL) deviceId = devices[0];
+
+	context = cl_init_create_context_by_devices(devices, numDevices);
+
+	commandQueue = cl_runtime_create_command_queue(context, deviceId);
+
+	// Проверка, поддерживается ли изображения устройством, в противном случае - приложение прекратит свою работу
+	cl_bool imageSupport = CL_FALSE;
+	clGetDeviceInfo(deviceId, CL_DEVICE_IMAGE_SUPPORT, sizeof(cl_bool), &imageSupport, NULL);
+	if (imageSupport != CL_TRUE)
+	{
+		printf("OpenCL device does not support images.\n");
+		exit(1);
+	}
+
+	sampler = cl_runtime_create_sampler(context);
+
+	cl_program program_meidan = cl_runtime_create_program_from_file(context, "Kernels/Median_Filter.cl");
+	if (cl_runtime_build_program(program_meidan, deviceId, NULL) == -1)
+		exit(-1);
+
+	kernel = cl_runtime_create_kernel(program_meidan, "median_filter");
 
 	// Получаем данные изображения из Bitmap
 	int width = m_pInputImage->GetWidth();
@@ -483,8 +519,8 @@ void CMFCApplicationClientDlg::OnBnClickedButtonMedianFiltering()
 	BYTE* outputPixels = (BYTE*)filteredBitmapData.Scan0;
 
 	// Медианная фильтрация
-	int s = width * height * count_channels * sizeof(BYTE);
-	bool success = medianFilter(inputPixels, outputPixels, width, height, count_channels, m_nFilterSize, commandQueue, kernel, context, sampler);
+	cl_ulong duration;
+	bool success = medianFilter(inputPixels, outputPixels, width, height, count_channels, m_nMedianFilterSize, commandQueue, kernel, context, sampler, &duration);
 
 	m_pInputImage->UnlockBits(&bitmapData);
 	filteredBitmap->UnlockBits(&filteredBitmapData);
@@ -501,6 +537,9 @@ void CMFCApplicationClientDlg::OnBnClickedButtonMedianFiltering()
 		MessageBox(L"Не удалось применить медианный фильтр.", L"Ошибка", MB_ICONERROR);
 		filteredBitmap = nullptr;
 	}
+
+	m_pProcessingDuration.Format(_T("Время обработки: %f мкс"), duration / 1000.f);
+	GetDlgItem(IDC_STATIC_PROCESSING_DURATION)->SetWindowText(m_pProcessingDuration);
 }
 
 
@@ -508,14 +547,396 @@ void CMFCApplicationClientDlg::OnEnChangeEditMeadianFilterSize()
 {
 	UpdateData(TRUE);
 
-	if (m_nFilterSize < 1) {
-		m_nFilterSize = 1;
+	if (m_nMedianFilterSize < 1) {
+		m_nMedianFilterSize = 1;
 		MessageBox(L"Размер фильтра должен быть не меньше 1.", L"Ошибка", MB_ICONERROR);
 		UpdateData(FALSE); // Обновляем Edit Control из m_nFilterSize
 	}
-	else if (m_nFilterSize > 5) {
-		m_nFilterSize = 5;
+	else if (m_nMedianFilterSize > 5) {
+		m_nMedianFilterSize = 5;
 		MessageBox(L"Размер фильтра не должен превышать 5.", L"Ошибка", MB_ICONERROR);
 		UpdateData(FALSE); // Обновляем Edit Control из m_nFilterSize
 	}
+}
+
+
+void CMFCApplicationClientDlg::OnLbnSelchangePlatformsList()
+{
+	m_pDeviceListBox.ResetContent();
+	int selectIdx = m_pPlatformListBox.GetCurSel();
+
+	if (selectIdx != LB_ERR) 
+	{
+		platformId = platforms[selectIdx]; 
+		// Вывод информации о выбранной платформе в строку состояния
+		size_t size;
+		clGetPlatformInfo(platformId, CL_PLATFORM_NAME, 0, nullptr, &size);
+		std::vector<char> buffer(size);
+		clGetPlatformInfo(platformId, CL_PLATFORM_NAME, size, buffer.data(), nullptr);
+		CString platformName(buffer.data());
+		platformInfo.Format(_T("Платформа: %s"), platformName.GetBuffer());
+		// Определение массива доступных устройств для выбранной платформы
+		numDevices = cl_init_get_num_devices(platformId);
+		if (devices != NULL) free(devices);
+		devices = cl_init_get_array_devices(platformId, CL_DEVICE_TYPE_GPU, numDevices);
+		for (int i = 0; i < numDevices; i++)
+		{
+			clGetDeviceInfo(devices[i], CL_DEVICE_NAME, 0, nullptr, &size);
+			std::vector<char> buffer(size);
+			clGetDeviceInfo(devices[i], CL_DEVICE_NAME, size, buffer.data(), nullptr);
+			CString deviceName(buffer.data());
+			m_pDeviceListBox.AddString(deviceName);
+		}
+	}
+
+	m_pOpenCLInitStatus.Format(_T("Статус инициализации OpenCL:\n\n %s"), platformInfo.GetBuffer());
+	GetDlgItem(IDC_STATIC_OPENCL_STATUS)->SetWindowText(m_pOpenCLInitStatus);
+}
+
+
+void CMFCApplicationClientDlg::OnLbnSelchangeDevicesList()
+{
+	int selectIdx = m_pDeviceListBox.GetCurSel();
+	if (selectIdx != LB_ERR)
+	{
+		deviceId = devices[selectIdx];
+		// Вывод информации о выбранном устройстве в строку состояния
+		size_t size;
+		clGetDeviceInfo(deviceId, CL_DEVICE_NAME, 0, nullptr, &size);
+		std::vector<char> buffer(size);
+		clGetDeviceInfo(deviceId, CL_DEVICE_NAME, size, buffer.data(), nullptr);
+		CString deviceName(buffer.data());
+		deviceInfo.Format(_T("Устройство: %s"), deviceName.GetBuffer());
+	}
+
+	m_pOpenCLInitStatus.Format(_T("Статус инициализации OpenCL:\n\n %s\n\n %s"), platformInfo.GetBuffer(), deviceInfo.GetBuffer());
+	GetDlgItem(IDC_STATIC_OPENCL_STATUS)->SetWindowText(m_pOpenCLInitStatus);
+}
+
+void CMFCApplicationClientDlg::ApplyGaussianNoise(Bitmap& source, Bitmap& destination, double mean, double stddev)
+{
+	int width = source.GetWidth();
+	int height = source.GetHeight();
+
+	BitmapData sourceData;
+	BitmapData destinationData;
+	Rect rect(0, 0, width, height);
+
+	source.LockBits(&rect, ImageLockModeRead, PixelFormat32bppARGB, &sourceData);
+	destination.LockBits(&rect, ImageLockModeWrite, PixelFormat32bppARGB, &destinationData);
+
+	BYTE* sourcePixels = (BYTE*)sourceData.Scan0;
+	BYTE* destinationPixels = (BYTE*)destinationData.Scan0;
+
+	int stride = sourceData.Stride;
+
+	for (int y = 0; y < height; y++)
+	{
+		for (int x = 0; x < width; x++)
+		{
+			int idx = y * stride + x * 4;
+			for (int i = 0; i < 3; i++)
+			{
+				int pixelValue = sourcePixels[idx + i];
+				
+				double sum = 0.0;
+				for (int i = 0; i < 12; i++)
+					sum += (double)rand() / RAND_MAX;
+
+				double z0 = sum - 6.0;
+
+				double noise = z0 * stddev + mean;
+
+				int newPixelValue = (int)(pixelValue + noise);
+								
+				newPixelValue = max(0, min(255, newPixelValue));
+
+				destinationPixels[idx + i] = (BYTE)newPixelValue;
+			}
+			destinationPixels[idx + 3] = sourcePixels[idx + 3];
+		}
+	}
+	source.UnlockBits(&sourceData);
+	destination.UnlockBits(&destinationData);
+}
+
+void CMFCApplicationClientDlg::OnBnClickedButtonApplyGaussianNoise()
+{
+	if (m_pInputImage == nullptr) {
+		MessageBox(L"Upload the image first.", L"Warning", MB_ICONWARNING);
+		return;
+	}
+
+	// Создаем новое изображение с шумом
+	Bitmap* clonedBitmap = m_pInputImage->Clone(0, 0, m_pInputImage->GetWidth(), m_pInputImage->GetHeight(), PixelFormat32bppARGB);
+	if (clonedBitmap == nullptr) {
+		MessageBox(L"Failed to clone the image.", L"Error", MB_ICONERROR);
+		return;
+	}
+
+	m_pOutputImage = nullptr;
+	m_pOutputImage = clonedBitmap;
+
+	ApplyGaussianNoise(*m_pInputImage, *m_pOutputImage, m_nMeanNoise, m_nStdDevNoise);
+
+	DisplayImageInPictureControl(m_pOutputImage, IDC_OUTPUT_IMAGE);
+
+	SaveBitmapToFile(*m_pOutputImage, m_originalImageFilePath, L"-Gaussian_Noisy");
+}
+
+
+void CMFCApplicationClientDlg::OnEnChangeEditMeanGaussianNoise()
+{
+	UpdateData(TRUE);
+}
+
+
+void CMFCApplicationClientDlg::OnEnChangeEditStddevGaussianNoise()
+{
+	UpdateData(TRUE);
+}
+
+void CMFCApplicationClientDlg::OnBnClickedButtonGaussianBlurFilter()
+{
+	if (m_pInputImage == nullptr) {
+		MessageBox(L"Please load an image first. (Buttons \"Load Image\" -> \"Add Noise\")", L"Error", MB_ICONERROR);
+		return;
+	}
+
+	if ((m_pOutputImage != nullptr) && toRewrite) {
+		// Если в m_pOutputImage уже занесёно изображение и флаг о перезаписи включен, то перезаписываем, иначе мы работаем с незашумлённым изображением либо изначально зашумленным но без перезаписи
+		m_pInputImage = m_pOutputImage->Clone(0, 0, m_pOutputImage->GetWidth(), m_pOutputImage->GetHeight(), m_pOutputImage->GetPixelFormat());
+		DisplayImageInPictureControl(m_pInputImage, IDC_INPUT_IMAGE);
+		m_pOutputImage = nullptr;
+		toRewrite = false;
+	}
+
+	// Массив платформ инициализируется при запуске приложения. Тут обрабатыается только тот случай, когда клиент не выбрал платформу
+	if (platformId == NULL) platformId = platforms[0];
+
+	if (devices == NULL)
+	{
+		numDevices = cl_init_get_num_devices(platformId);
+		devices = cl_init_get_array_devices(platformId, CL_DEVICE_TYPE_GPU, numDevices);
+	}
+
+	if (deviceId == NULL) deviceId = devices[0];
+
+	context = cl_init_create_context_by_devices(devices, numDevices);
+
+	commandQueue = cl_runtime_create_command_queue(context, deviceId);
+
+	// Проверка, поддерживается ли изображения устройством, в противном случае - приложение прекратит свою работу
+	cl_bool imageSupport = CL_FALSE;
+	clGetDeviceInfo(deviceId, CL_DEVICE_IMAGE_SUPPORT, sizeof(cl_bool), &imageSupport, NULL);
+	if (imageSupport != CL_TRUE)
+	{
+		printf("OpenCL device does not support images.\n");
+		exit(1);
+	}
+
+	sampler = cl_runtime_create_sampler(context);
+
+	cl_program program_meidan = cl_runtime_create_program_from_file(context, "Kernels/Kernel_Gaussian_Filter.cl");
+	if (cl_runtime_build_program(program_meidan, deviceId, NULL) == -1)
+		exit(-1);
+
+	kernel = cl_runtime_create_kernel(program_meidan, "gaussian_filter");
+
+	// Получаем данные изображения из Bitmap
+	int width = m_pInputImage->GetWidth();
+	int height = m_pInputImage->GetHeight();
+
+	BitmapData bitmapData;
+	Rect rect(0, 0, width, height);
+	PixelFormat pixelFormat = m_pInputImage->GetPixelFormat();
+
+	m_pInputImage->LockBits(&rect, ImageLockModeRead, pixelFormat, &bitmapData);
+
+	BYTE* inputPixels = (BYTE*)bitmapData.Scan0;
+
+	int count_channels = 4;
+	switch (bitmapData.PixelFormat)
+	{
+	case PixelFormat24bppRGB: count_channels = 3; break;
+	case PixelFormat32bppARGB: count_channels = 4; break;
+	case PixelFormat8bppIndexed: count_channels = 1; break;
+	default:
+		count_channels = 0;
+		MessageBox(L"Unsupported PixelFormat", L"Error", MB_ICONERROR);
+		return;
+	}
+
+	// Создаем Bitmap для вывода
+	Bitmap* filteredBitmap = m_pInputImage->Clone(0, 0, width, height, pixelFormat);
+	BitmapData filteredBitmapData;
+	Rect filteredRect(0, 0, width, height);
+	filteredBitmap->LockBits(&filteredRect, ImageLockModeWrite, pixelFormat, &filteredBitmapData);
+
+	BYTE* outputPixels = (BYTE*)filteredBitmapData.Scan0;
+
+	// Фильтрация Гауссовым размытием
+	cl_ulong duration;
+	bool success = gaussianBlurFilter(inputPixels, outputPixels, width, height, count_channels, commandQueue, kernel, context, sampler, &duration);
+
+	m_pInputImage->UnlockBits(&bitmapData);
+	filteredBitmap->UnlockBits(&filteredBitmapData);
+
+	if (success)
+	{
+		m_pOutputImage = nullptr;
+		m_pOutputImage = filteredBitmap;
+
+		DisplayImageInPictureControl(m_pOutputImage, IDC_OUTPUT_IMAGE);
+		SaveBitmapToFile(*m_pOutputImage, m_originalImageFilePath, L"-After_Median_Filter");
+	}
+	else {
+		MessageBox(L"Не удалось применить медианный фильтр.", L"Ошибка", MB_ICONERROR);
+		filteredBitmap = nullptr;
+	}
+
+	m_pProcessingDuration.Format(_T("Время обработки: %f мкс"), duration / 1000.f);
+	GetDlgItem(IDC_STATIC_PROCESSING_DURATION)->SetWindowText(m_pProcessingDuration);
+}
+
+
+void CMFCApplicationClientDlg::OnBnClickedButtonMedianFilteringCpu()
+{
+	if (m_pInputImage == nullptr) {
+		MessageBox(L"Please load an image first. (Buttons \"Load Image\" -> \"Add Noise\")", L"Error", MB_ICONERROR);
+		return;
+	}
+
+	if ((m_pOutputImage != nullptr) && toRewrite) {
+		// Если в m_pOutputImage уже занесёно изображение и флаг о перезаписи включен, то перезаписываем, иначе мы работаем с незашумлённым изображением либо изначально зашумленным но без перезаписи
+		m_pInputImage = m_pOutputImage->Clone(0, 0, m_pOutputImage->GetWidth(), m_pOutputImage->GetHeight(), m_pOutputImage->GetPixelFormat());
+		DisplayImageInPictureControl(m_pInputImage, IDC_INPUT_IMAGE);
+		m_pOutputImage = nullptr;
+		toRewrite = false;
+	}
+
+	// Получаем данные изображения из Bitmap
+	int width = m_pInputImage->GetWidth();
+	int height = m_pInputImage->GetHeight();
+
+	BitmapData bitmapData;
+	Rect rect(0, 0, width, height);
+	PixelFormat pixelFormat = m_pInputImage->GetPixelFormat();
+
+	m_pInputImage->LockBits(&rect, ImageLockModeRead, pixelFormat, &bitmapData);
+
+	BYTE* inputPixels = (BYTE*)bitmapData.Scan0;
+
+	int count_channels = 4;
+	switch (bitmapData.PixelFormat)
+	{
+	case PixelFormat24bppRGB: count_channels = 3; break;
+	case PixelFormat32bppARGB: count_channels = 4; break;
+	case PixelFormat8bppIndexed: count_channels = 1; break;
+	default:
+		count_channels = 0;
+		MessageBox(L"Unsupported PixelFormat", L"Error", MB_ICONERROR);
+		return;
+	}
+
+	// Создаем Bitmap для вывода
+	Bitmap* filteredBitmap = m_pInputImage->Clone(0, 0, width, height, pixelFormat);
+	BitmapData filteredBitmapData;
+	Rect filteredRect(0, 0, width, height);
+	filteredBitmap->LockBits(&filteredRect, ImageLockModeWrite, pixelFormat, &filteredBitmapData);
+
+	BYTE* outputPixels = (BYTE*)filteredBitmapData.Scan0;
+
+	unsigned long long duration;
+	bool success = CPU_Filtering::medianFilterCPU(inputPixels, outputPixels, width, height, count_channels, m_nMedianFilterSize, &duration);
+
+	m_pInputImage->UnlockBits(&bitmapData);
+	filteredBitmap->UnlockBits(&filteredBitmapData);
+
+	if (success)
+	{
+		m_pOutputImage = nullptr;
+		m_pOutputImage = filteredBitmap;
+
+		DisplayImageInPictureControl(m_pOutputImage, IDC_OUTPUT_IMAGE);
+		SaveBitmapToFile(*m_pOutputImage, m_originalImageFilePath, L"-After_Median_Filter");
+	}
+	else {
+		MessageBox(L"Не удалось применить медианный фильтр.", L"Ошибка", MB_ICONERROR);
+		filteredBitmap = nullptr;
+	}
+
+	m_pProcessingDuration.Format(_T("Время обработки: %f мкс"), duration / 1000.f);
+	GetDlgItem(IDC_STATIC_PROCESSING_DURATION)->SetWindowText(m_pProcessingDuration);
+}
+
+
+void CMFCApplicationClientDlg::OnBnClickedButtonGaussianBlurFilterCpu()
+{
+	if (m_pInputImage == nullptr) {
+		MessageBox(L"Please load an image first. (Buttons \"Load Image\" -> \"Add Noise\")", L"Error", MB_ICONERROR);
+		return;
+	}
+
+	if ((m_pOutputImage != nullptr) && toRewrite) {
+		// Если в m_pOutputImage уже занесёно изображение и флаг о перезаписи включен, то перезаписываем, иначе мы работаем с незашумлённым изображением либо изначально зашумленным но без перезаписи
+		m_pInputImage = m_pOutputImage->Clone(0, 0, m_pOutputImage->GetWidth(), m_pOutputImage->GetHeight(), m_pOutputImage->GetPixelFormat());
+		DisplayImageInPictureControl(m_pInputImage, IDC_INPUT_IMAGE);
+		m_pOutputImage = nullptr;
+		toRewrite = false;
+	}
+
+	// Получаем данные изображения из Bitmap
+	int width = m_pInputImage->GetWidth();
+	int height = m_pInputImage->GetHeight();
+
+	BitmapData bitmapData;
+	Rect rect(0, 0, width, height);
+	PixelFormat pixelFormat = m_pInputImage->GetPixelFormat();
+
+	m_pInputImage->LockBits(&rect, ImageLockModeRead, pixelFormat, &bitmapData);
+
+	BYTE* inputPixels = (BYTE*)bitmapData.Scan0;
+
+	int count_channels = 4;
+	switch (bitmapData.PixelFormat)
+	{
+	case PixelFormat24bppRGB: count_channels = 3; break;
+	case PixelFormat32bppARGB: count_channels = 4; break;
+	case PixelFormat8bppIndexed: count_channels = 1; break;
+	default:
+		count_channels = 0;
+		MessageBox(L"Unsupported PixelFormat", L"Error", MB_ICONERROR);
+		return;
+	}
+
+	// Создаем Bitmap для вывода
+	Bitmap* filteredBitmap = m_pInputImage->Clone(0, 0, width, height, pixelFormat);
+	BitmapData filteredBitmapData;
+	Rect filteredRect(0, 0, width, height);
+	filteredBitmap->LockBits(&filteredRect, ImageLockModeWrite, pixelFormat, &filteredBitmapData);
+
+	BYTE* outputPixels = (BYTE*)filteredBitmapData.Scan0;
+
+	unsigned long long duration;
+	bool success = CPU_Filtering::gaussianBlurFilterCPU(inputPixels, outputPixels, width, height, count_channels, &duration);
+
+	m_pInputImage->UnlockBits(&bitmapData);
+	filteredBitmap->UnlockBits(&filteredBitmapData);
+
+	if (success)
+	{
+		m_pOutputImage = nullptr;
+		m_pOutputImage = filteredBitmap;
+
+		DisplayImageInPictureControl(m_pOutputImage, IDC_OUTPUT_IMAGE);
+		SaveBitmapToFile(*m_pOutputImage, m_originalImageFilePath, L"-After_Median_Filter");
+	}
+	else {
+		MessageBox(L"Не удалось применить медианный фильтр.", L"Ошибка", MB_ICONERROR);
+		filteredBitmap = nullptr;
+	}
+
+	m_pProcessingDuration.Format(_T("Время обработки: %f мкс"), duration / 1000.f);
+	GetDlgItem(IDC_STATIC_PROCESSING_DURATION)->SetWindowText(m_pProcessingDuration);
 }
