@@ -5,6 +5,8 @@
 #pragma once
 #include "CL/cl.h"
 #include <vector>
+#include <fstream>
+#include <string>
 
 
 // Диалоговое окно CMFCApplicationClientDlg
@@ -29,6 +31,8 @@ private:
 	CString platformInfo, deviceInfo;
 
 	bool toRewrite;										// Переписывать ли Picture Controle
+	bool reName_Pulse_Noise, reName_Gaussian_Noise;
+	bool reName_Median_GPU, reName_Median_CPU, reName_Gaussian_GPU, reName_Gaussian_CPU;
 
 	cl_platform_id* platforms;							// Массив всех доступных платформ
 	cl_platform_id platformId;							// Идентификатор выбранной пользователем платформы OpenCL
@@ -43,9 +47,12 @@ private:
 	void DisplayImageInPictureControl(Bitmap* image, int pictureControlID);			// Для отображения нового изображения в объекте Picture Control
 	void ApplyImpulseNoise(Bitmap& source, Bitmap& destination, double noiseProbability);		// Для наложения импульсного шума
 	void ApplyGaussianNoise(Bitmap& source, Bitmap& destination, double mean, double stddev);		// Для наложения гауссового шума
-	bool SaveBitmapToFile(Bitmap& bitmap, CString& sourceFilePath, const CString& appendedPartName);		// Для сохранения изображения в файл
+	bool SaveBitmapToFile(Bitmap& bitmap, CString& sourceFilePath, const CString& appendedPartName, bool reName);		// Для сохранения изображения в файл
 	Status GetEncoderClsid(const WCHAR* format, CLSID* pClsid);		// Вспомогательная функция для получения расширения файла изображения (Там немного мороки, но наверное это можно как-то заменить)
 	void SplitPath(CString& filePath, CString& folderPath, CString& fileName, CString& fileExt);		// Вспомогательная функция для разделения пути файла на части
+
+	int countCurCells;
+	void writeDataToCSV(const std::string& filename, int imageWidth, int imageHeight, int data2, float data3);
 
 	// Создание
 public:

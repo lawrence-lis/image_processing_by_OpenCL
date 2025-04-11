@@ -44,7 +44,14 @@ CMFCApplicationClientDlg::CMFCApplicationClientDlg(CWnd* pParent /*=nullptr*/)
 	sampler(NULL),
 	m_nMeanNoise(0),
 	m_nStdDevNoise(30),
-	m_nMedianFilterSize(3)
+	m_nMedianFilterSize(3),
+	countCurCells(0), 
+	reName_Median_GPU(true),
+	reName_Median_CPU(true),
+	reName_Gaussian_GPU(true),
+	reName_Gaussian_CPU(true),
+	reName_Pulse_Noise(true), 
+	reName_Gaussian_Noise(true)
 {
 	m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
 }
@@ -155,11 +162,13 @@ CMFCApplicationClientDlg::~CMFCApplicationClientDlg()
 	free(platforms);
 	free(devices);
 	delete m_pInputImage;
-	m_pOutputImage = nullptr;
+	delete m_pOutputImage;
+
 }
 
 void CMFCApplicationClientDlg::OnBnClickedButtonLoadImage()
 {
+	countCurCells = 0;
 	CFileDialog dlg(TRUE, NULL, NULL, OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST | OFN_HIDEREADONLY, L"Image Files (*.bmp;*.jpg;*.jpeg;*.png;*.gif)|*.bmp;*.jpg;*.jpeg;*.png;*.gif|BMP Files (*.bmp)|*.bmp|JPEG Files (*.jpg;*.jpeg)|*.jpg;*.jpeg|PNG Files (*.png)|*.png|GIF Files (*.gif)|*.gif|All Files (*.*)|*.*||");
 	if (dlg.DoModal() == IDOK) {
 		CString filePath = dlg.GetPathName();
@@ -227,8 +236,7 @@ void CMFCApplicationClientDlg::OnBnClickedButtonAddNoise()
 	// Отобразит изображение с шумом
 	DisplayImageInPictureControl(m_pOutputImage, IDC_OUTPUT_IMAGE);
 
-	// Сохранить изображение в файл
-	SaveBitmapToFile(*m_pOutputImage, m_originalImageFilePath, L"-Pulse_Noisy");
+	if (reName_Pulse_Noise) reName_Pulse_Noise = false;
 }
 
 void CMFCApplicationClientDlg::DisplayImageInPictureControl(Bitmap* image, int pictureControlID)
@@ -325,13 +333,13 @@ void CMFCApplicationClientDlg::ApplyImpulseNoise(Bitmap& source, Bitmap& destina
 }
 
 
-bool CMFCApplicationClientDlg::SaveBitmapToFile(Bitmap& bitmap, CString& sourceFilePath, const CString& appendedPartName)
+bool CMFCApplicationClientDlg::SaveBitmapToFile(Bitmap& bitmap, CString& sourceFilePath, const CString& appendedPartName, bool reName)
 {
 	// 1. Получаем информацию об исходном файле
 	CString folderPath, fileName, fileExt;
 	SplitPath(sourceFilePath, folderPath, fileName, fileExt);
 
-	sourceFilePath = folderPath + L"\\" + fileName + appendedPartName + fileExt;
+	if (reName)sourceFilePath = folderPath + L"\\" + fileName + appendedPartName + fileExt;
 
 	// 2. Создаем новое имя файла
 	CString newFileName = sourceFilePath;
@@ -441,6 +449,7 @@ void CMFCApplicationClientDlg::SplitPath(CString& filePath, CString& folderPath,
 
 void CMFCApplicationClientDlg::OnBnClickedButtonMedianFiltering()
 {
+	countCurCells++;
 	if (m_pInputImage == nullptr) {
 		MessageBox(L"Please load an image first. (Buttons \"Load Image\" -> \"Add Noise\")", L"Error", MB_ICONERROR);
 		return;
@@ -460,7 +469,7 @@ void CMFCApplicationClientDlg::OnBnClickedButtonMedianFiltering()
 	if (devices == NULL)
 	{
 		numDevices = cl_init_get_num_devices(platformId);
-		devices = cl_init_get_array_devices(platformId, CL_DEVICE_TYPE_GPU, numDevices);
+		devices = cl_init_get_array_devices(platformId, CL_DEVICE_TYPE_ALL, numDevices);
 	}
 
 	if (deviceId == NULL) deviceId = devices[0];
@@ -528,18 +537,27 @@ void CMFCApplicationClientDlg::OnBnClickedButtonMedianFiltering()
 	if (success)
 	{
 		m_pOutputImage = nullptr;
-		m_pOutputImage = filteredBitmap;
+		m_pOutputImage = filteredBitmap->Clone(0, 0, width, height, pixelFormat);
 
 		DisplayImageInPictureControl(m_pOutputImage, IDC_OUTPUT_IMAGE);
-		SaveBitmapToFile(*m_pOutputImage, m_originalImageFilePath, L"-After_Median_Filter");
+
+		if (reName_Median_GPU) reName_Median_GPU = false;
 	}
 	else {
+		delete filteredBitmap;
 		MessageBox(L"Не удалось применить медианный фильтр.", L"Ошибка", MB_ICONERROR);
-		filteredBitmap = nullptr;
 	}
 
-	m_pProcessingDuration.Format(_T("Время обработки: %f мкс"), duration / 1000.f);
+	delete filteredBitmap;
+	m_pProcessingDuration.Format(_T("Время обработки: %.4f мс"), duration / 1000000.f);
 	GetDlgItem(IDC_STATIC_PROCESSING_DURATION)->SetWindowText(m_pProcessingDuration);
+	writeDataToCSV("MedianFilterGPU_Data.csv", width, height, countCurCells, duration / 1000000.f);
+
+	clReleaseContext(context);
+	clReleaseCommandQueue(commandQueue);
+	clReleaseKernel(kernel);
+	clReleaseSampler(sampler);
+	clReleaseProgram(program_meidan);
 }
 
 
@@ -578,7 +596,7 @@ void CMFCApplicationClientDlg::OnLbnSelchangePlatformsList()
 		// Определение массива доступных устройств для выбранной платформы
 		numDevices = cl_init_get_num_devices(platformId);
 		if (devices != NULL) free(devices);
-		devices = cl_init_get_array_devices(platformId, CL_DEVICE_TYPE_GPU, numDevices);
+		devices = cl_init_get_array_devices(platformId, CL_DEVICE_TYPE_ALL, numDevices);
 		for (int i = 0; i < numDevices; i++)
 		{
 			clGetDeviceInfo(devices[i], CL_DEVICE_NAME, 0, nullptr, &size);
@@ -681,7 +699,7 @@ void CMFCApplicationClientDlg::OnBnClickedButtonApplyGaussianNoise()
 
 	DisplayImageInPictureControl(m_pOutputImage, IDC_OUTPUT_IMAGE);
 
-	SaveBitmapToFile(*m_pOutputImage, m_originalImageFilePath, L"-Gaussian_Noisy");
+	if (reName_Gaussian_Noise) reName_Gaussian_Noise = false;
 }
 
 
@@ -698,6 +716,7 @@ void CMFCApplicationClientDlg::OnEnChangeEditStddevGaussianNoise()
 
 void CMFCApplicationClientDlg::OnBnClickedButtonGaussianBlurFilter()
 {
+	countCurCells++;
 	if (m_pInputImage == nullptr) {
 		MessageBox(L"Please load an image first. (Buttons \"Load Image\" -> \"Add Noise\")", L"Error", MB_ICONERROR);
 		return;
@@ -717,7 +736,7 @@ void CMFCApplicationClientDlg::OnBnClickedButtonGaussianBlurFilter()
 	if (devices == NULL)
 	{
 		numDevices = cl_init_get_num_devices(platformId);
-		devices = cl_init_get_array_devices(platformId, CL_DEVICE_TYPE_GPU, numDevices);
+		devices = cl_init_get_array_devices(platformId, CL_DEVICE_TYPE_ALL, numDevices);
 	}
 
 	if (deviceId == NULL) deviceId = devices[0];
@@ -737,11 +756,11 @@ void CMFCApplicationClientDlg::OnBnClickedButtonGaussianBlurFilter()
 
 	sampler = cl_runtime_create_sampler(context);
 
-	cl_program program_meidan = cl_runtime_create_program_from_file(context, "Kernels/Kernel_Gaussian_Filter.cl");
-	if (cl_runtime_build_program(program_meidan, deviceId, NULL) == -1)
+	cl_program program = cl_runtime_create_program_from_file(context, "Kernels/Kernel_Gaussian_Filter.cl");
+	if (cl_runtime_build_program(program, deviceId, NULL) == -1)
 		exit(-1);
 
-	kernel = cl_runtime_create_kernel(program_meidan, "gaussian_filter");
+	kernel = cl_runtime_create_kernel(program, "gaussian_filter");
 
 	// Получаем данные изображения из Bitmap
 	int width = m_pInputImage->GetWidth();
@@ -785,23 +804,33 @@ void CMFCApplicationClientDlg::OnBnClickedButtonGaussianBlurFilter()
 	if (success)
 	{
 		m_pOutputImage = nullptr;
-		m_pOutputImage = filteredBitmap;
+		m_pOutputImage = filteredBitmap->Clone(0, 0, width, height, pixelFormat);
 
 		DisplayImageInPictureControl(m_pOutputImage, IDC_OUTPUT_IMAGE);
-		SaveBitmapToFile(*m_pOutputImage, m_originalImageFilePath, L"-After_Median_Filter");
+
+		if (reName_Gaussian_GPU)reName_Gaussian_GPU = false;
 	}
 	else {
 		MessageBox(L"Не удалось применить медианный фильтр.", L"Ошибка", MB_ICONERROR);
 		filteredBitmap = nullptr;
 	}
 
-	m_pProcessingDuration.Format(_T("Время обработки: %f мкс"), duration / 1000.f);
+	delete filteredBitmap;
+	m_pProcessingDuration.Format(_T("Время обработки: %.4f мс"), duration / 1000000.f);
 	GetDlgItem(IDC_STATIC_PROCESSING_DURATION)->SetWindowText(m_pProcessingDuration);
+	writeDataToCSV("GaussianBlurFilterGPU_Data.csv", width, height, countCurCells, duration / 1000000.f);
+
+	clReleaseContext(context);
+	clReleaseCommandQueue(commandQueue);
+	clReleaseKernel(kernel);
+	clReleaseProgram(program);
+	clReleaseSampler(sampler);
 }
 
 
 void CMFCApplicationClientDlg::OnBnClickedButtonMedianFilteringCpu()
 {
+	countCurCells++;
 	if (m_pInputImage == nullptr) {
 		MessageBox(L"Please load an image first. (Buttons \"Load Image\" -> \"Add Noise\")", L"Error", MB_ICONERROR);
 		return;
@@ -856,23 +885,26 @@ void CMFCApplicationClientDlg::OnBnClickedButtonMedianFilteringCpu()
 	if (success)
 	{
 		m_pOutputImage = nullptr;
-		m_pOutputImage = filteredBitmap;
+		m_pOutputImage = filteredBitmap->Clone(0, 0, width, height, pixelFormat);;
 
 		DisplayImageInPictureControl(m_pOutputImage, IDC_OUTPUT_IMAGE);
-		SaveBitmapToFile(*m_pOutputImage, m_originalImageFilePath, L"-After_Median_Filter");
+
+		if (reName_Median_CPU) reName_Median_CPU = false;
 	}
 	else {
 		MessageBox(L"Не удалось применить медианный фильтр.", L"Ошибка", MB_ICONERROR);
 		filteredBitmap = nullptr;
 	}
 
-	m_pProcessingDuration.Format(_T("Время обработки: %f мкс"), duration / 1000.f);
+	delete filteredBitmap;
+	m_pProcessingDuration.Format(_T("Время обработки: %.4f мс"), duration / 1000000.f);
 	GetDlgItem(IDC_STATIC_PROCESSING_DURATION)->SetWindowText(m_pProcessingDuration);
+	writeDataToCSV("MedianFilterCPU_Data.csv", width, height, countCurCells, duration / 1000000.f);
 }
-
 
 void CMFCApplicationClientDlg::OnBnClickedButtonGaussianBlurFilterCpu()
 {
+	countCurCells++;
 	if (m_pInputImage == nullptr) {
 		MessageBox(L"Please load an image first. (Buttons \"Load Image\" -> \"Add Noise\")", L"Error", MB_ICONERROR);
 		return;
@@ -927,16 +959,31 @@ void CMFCApplicationClientDlg::OnBnClickedButtonGaussianBlurFilterCpu()
 	if (success)
 	{
 		m_pOutputImage = nullptr;
-		m_pOutputImage = filteredBitmap;
+		m_pOutputImage = filteredBitmap->Clone(0, 0, width, height, pixelFormat);
 
 		DisplayImageInPictureControl(m_pOutputImage, IDC_OUTPUT_IMAGE);
-		SaveBitmapToFile(*m_pOutputImage, m_originalImageFilePath, L"-After_Median_Filter");
+
+		if (reName_Gaussian_CPU) reName_Gaussian_CPU = false;
 	}
 	else {
 		MessageBox(L"Не удалось применить медианный фильтр.", L"Ошибка", MB_ICONERROR);
 		filteredBitmap = nullptr;
 	}
 
-	m_pProcessingDuration.Format(_T("Время обработки: %f мкс"), duration / 1000.f);
+	delete filteredBitmap;
+	m_pProcessingDuration.Format(_T("Время обработки: %.4f мс"), duration / 1000000.f);
 	GetDlgItem(IDC_STATIC_PROCESSING_DURATION)->SetWindowText(m_pProcessingDuration);
+	writeDataToCSV("GaussianBlurFilterCPU_Data.csv", width, height, countCurCells, duration / 1000000.f);
+}
+
+void CMFCApplicationClientDlg::writeDataToCSV(const std::string& filename, int imageWidth, int imageHeight, int data2, float data3)
+{
+	std::ofstream outputFile(filename, std::ios::app);
+	if (outputFile.is_open()) {
+		std::string imageSizeString = std::to_string(imageWidth) + "*" + std::to_string(imageHeight);
+		long long imageSize = (long long)imageWidth * (long long)imageHeight;
+		outputFile << imageSizeString << "," << imageSize << "," << data2 << "," << data3 << std::endl;
+		outputFile.close();
+	}
+	else MessageBox(L"Не получилось записать данные!", L"Error", MB_ICONERROR);
 }
