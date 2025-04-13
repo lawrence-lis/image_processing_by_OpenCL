@@ -21,9 +21,12 @@ private:
 	CListBox m_pPlatformListBox; // Для платформ
 	CListBox m_pDeviceListBox; // Для устройств
 
+	CComboBox m_pNoiseType;
+
 	float m_nMeanNoise;
 	float m_nStdDevNoise;
 	int m_nMedianFilterSize;
+	int m_nStatisticCountCalculations;
 
 	CString m_originalImageFilePath;
 	CString m_pOpenCLInitStatus;
@@ -31,8 +34,8 @@ private:
 	CString platformInfo, deviceInfo;
 
 	bool toRewrite;										// Переписывать ли Picture Controle
-	bool reName_Pulse_Noise, reName_Gaussian_Noise;
-	bool reName_Median_GPU, reName_Median_CPU, reName_Gaussian_GPU, reName_Gaussian_CPU;
+
+	BOOL m_pStatisticModeCheckBox;
 
 	cl_platform_id* platforms;							// Массив всех доступных платформ
 	cl_platform_id platformId;							// Идентификатор выбранной пользователем платформы OpenCL
@@ -43,6 +46,7 @@ private:
 	cl_command_queue commandQueue;
 	cl_kernel kernel;
 	cl_sampler sampler;
+	cl_program program;
 
 	void DisplayImageInPictureControl(Bitmap* image, int pictureControlID);			// Для отображения нового изображения в объекте Picture Control
 	void ApplyImpulseNoise(Bitmap& source, Bitmap& destination, double noiseProbability);		// Для наложения импульсного шума
@@ -50,9 +54,14 @@ private:
 	bool SaveBitmapToFile(Bitmap& bitmap, CString& sourceFilePath, const CString& appendedPartName, bool reName);		// Для сохранения изображения в файл
 	Status GetEncoderClsid(const WCHAR* format, CLSID* pClsid);		// Вспомогательная функция для получения расширения файла изображения (Там немного мороки, но наверное это можно как-то заменить)
 	void SplitPath(CString& filePath, CString& folderPath, CString& fileName, CString& fileExt);		// Вспомогательная функция для разделения пути файла на части
-
-	int countCurCells;
-	void writeDataToCSV(const std::string& filename, int imageWidth, int imageHeight, int data2, float data3);
+	/// <summary>
+	/// Вспомогательная функция для обработки изображений.
+	/// Параметры:
+	///		* only_cpu - флаг использования исключительно центрального процессора. В этом случае не производятся инициализация OpenCL и не используются никакие типы данных свойственных данному API.
+	///		* kernel_file_name - имя файла, содержащего код ядра для выполнения на устройстве OpenCL. Имеет расширение .cl. Либо строка, ч помощью которой можно использовать тот или иной метод обработки на CPU.
+	///		* kernel_function_name - имя функции, реализованной в коде ядра, которую будет выполнять устройство.
+	/// </summary>
+	void DefiningConditions(bool only_cpu, const char* kernel_file_name, const char* kernel_function_name);
 
 	// Создание
 public:
@@ -92,4 +101,8 @@ public:
 	afx_msg void OnBnClickedButtonGaussianBlurFilter();
 	afx_msg void OnBnClickedButtonMedianFilteringCpu();
 	afx_msg void OnBnClickedButtonGaussianBlurFilterCpu();
+	afx_msg void OnBnClickedCheckStatisticMode();
+	afx_msg void OnEnChangeEditSizeStatisticCountCalculations();
+	afx_msg void OnBnClickedButtonApplyNoise();
+	afx_msg void OnBnClickedButtonCalculatingStatistic();
 };
