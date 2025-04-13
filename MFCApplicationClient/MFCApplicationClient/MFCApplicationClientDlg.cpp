@@ -121,6 +121,11 @@ BOOL CMFCApplicationClientDlg::OnInitDialog()
 	CProgressCtrl* pProgress = (CProgressCtrl*)GetDlgItem(IDC_PROGRESS_STATISTIC);
 	if (pProgress != nullptr) pProgress->ShowWindow(m_pStatisticModeCheckBox ? SW_SHOW : SW_HIDE);
 
+	m_pNoiseType.SubclassDlgItem(IDC_COMBO_NOISE_TYPE, this);
+	m_pNoiseType.AddString(_T("Импульсный шум"));
+	m_pNoiseType.AddString(_T("Гауссов шум"));
+	m_pNoiseType.SetCurSel(0);
+
 	return TRUE;  // возврат значения TRUE, если фокус не передан элементу управления
 }
 
@@ -167,8 +172,7 @@ CMFCApplicationClientDlg::~CMFCApplicationClientDlg()
 	free(platforms);
 	free(devices);
 	delete m_pInputImage;
-	delete m_pOutputImage;
-
+	m_pOutputImage = nullptr;
 }
 
 void CMFCApplicationClientDlg::OnBnClickedButtonLoadImage()
@@ -214,32 +218,6 @@ void CMFCApplicationClientDlg::OnSize(UINT nType, int cx, int cy)
 	}
 
 	// TODO: добавьте свой код обработчика сообщений
-}
-
-//<--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-void CMFCApplicationClientDlg::OnBnClickedButtonAddNoise()
-{
-	if (m_pInputImage == nullptr) {
-		MessageBox(L"Upload the image first.", L"Warning", MB_ICONWARNING);
-		return;
-	}
-
-	// Создаем новое изображение с шумом
-	Bitmap* clonedBitmap = m_pInputImage->Clone(0, 0, m_pInputImage->GetWidth(), m_pInputImage->GetHeight(), PixelFormat32bppARGB);
-	if (clonedBitmap == nullptr) {
-		MessageBox(L"Failed to clone the image.", L"Error", MB_ICONERROR);
-		return;
-	}
-
-	m_pOutputImage = nullptr;
-	m_pOutputImage = clonedBitmap;
-
-	// Добавить импульсный шум
-	ApplyImpulseNoise(*m_pInputImage, *m_pOutputImage, 0.05);
-
-	// Отобразит изображение с шумом
-	DisplayImageInPictureControl(m_pOutputImage, IDC_OUTPUT_IMAGE);
 }
 
 void CMFCApplicationClientDlg::DisplayImageInPictureControl(Bitmap* image, int pictureControlID)
@@ -336,13 +314,13 @@ void CMFCApplicationClientDlg::ApplyImpulseNoise(Bitmap& source, Bitmap& destina
 }
 
 
-bool CMFCApplicationClientDlg::SaveBitmapToFile(Bitmap& bitmap, CString& sourceFilePath, const CString& appendedPartName, bool reName)
+bool CMFCApplicationClientDlg::SaveBitmapToFile(Bitmap& bitmap, CString& sourceFilePath, const CString& appendedPartName)
 {
 	// 1. Получаем информацию об исходном файле
 	CString folderPath, fileName, fileExt;
 	SplitPath(sourceFilePath, folderPath, fileName, fileExt);
 
-	if (reName)sourceFilePath = folderPath + L"\\" + fileName + appendedPartName + fileExt;
+	sourceFilePath = folderPath + L"\\" + fileName + appendedPartName + fileExt;
 
 	// 2. Создаем новое имя файла
 	CString newFileName = sourceFilePath;
@@ -491,7 +469,7 @@ void CMFCApplicationClientDlg::OnLbnSelchangePlatformsList()
 		// Определение массива доступных устройств для выбранной платформы
 		numDevices = cl_init_get_num_devices(platformId);
 		if (devices != NULL) free(devices);
-		devices = cl_init_get_array_devices(platformId, CL_DEVICE_TYPE_ALL, numDevices);
+		devices = cl_init_get_array_devices(platformId, CL_DEVICE_TYPE_GPU, numDevices);
 		for (int i = 0; i < numDevices; i++)
 		{
 			clGetDeviceInfo(devices[i], CL_DEVICE_NAME, 0, nullptr, &size);
@@ -572,31 +550,6 @@ void CMFCApplicationClientDlg::ApplyGaussianNoise(Bitmap& source, Bitmap& destin
 	source.UnlockBits(&sourceData);
 	destination.UnlockBits(&destinationData);
 }
-
-//<------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-void CMFCApplicationClientDlg::OnBnClickedButtonApplyGaussianNoise()
-{
-	if (m_pInputImage == nullptr) {
-		MessageBox(L"Upload the image first.", L"Warning", MB_ICONWARNING);
-		return;
-	}
-
-	// Создаем новое изображение с шумом
-	Bitmap* clonedBitmap = m_pInputImage->Clone(0, 0, m_pInputImage->GetWidth(), m_pInputImage->GetHeight(), PixelFormat32bppARGB);
-	if (clonedBitmap == nullptr) {
-		MessageBox(L"Failed to clone the image.", L"Error", MB_ICONERROR);
-		return;
-	}
-
-	m_pOutputImage = nullptr;
-	m_pOutputImage = clonedBitmap;
-
-	ApplyGaussianNoise(*m_pInputImage, *m_pOutputImage, m_nMeanNoise, m_nStdDevNoise);
-
-	DisplayImageInPictureControl(m_pOutputImage, IDC_OUTPUT_IMAGE);
-}
-
 
 void CMFCApplicationClientDlg::OnEnChangeEditMeanGaussianNoise()
 {
@@ -742,7 +695,7 @@ void CMFCApplicationClientDlg::DefiningConditions(bool only_cpu, const char* ker
 	cl_ulong duration;
 	bool success;
 	if (kernel_file_name == "Kernels/Median_Filter.cl") success = medianFilter(inputPixels, outputPixels, width, height, count_channels, m_nMedianFilterSize, commandQueue, kernel, context, sampler, &duration);
-	else if (kernel_file_name == "Kernels/Kernel_Gaussian_Filter.cl") success = medianFilter(inputPixels, outputPixels, width, height, count_channels, m_nMedianFilterSize, commandQueue, kernel, context, sampler, &duration);
+	else if (kernel_file_name == "Kernels/Kernel_Gaussian_Filter.cl") success = gaussianBlurFilter(inputPixels, outputPixels, width, height, count_channels, commandQueue, kernel, context, sampler, &duration);
 	else if (kernel_file_name == "Median Filtering on CPU") success = CPU_Filtering::medianFilterCPU(inputPixels, outputPixels, width, height, count_channels, m_nMedianFilterSize, &duration);
 	else if (kernel_file_name == "Gaussian Filtering on CPU")success = CPU_Filtering::gaussianBlurFilterCPU(inputPixels, outputPixels, width, height, count_channels, &duration);
 	else {
@@ -779,7 +732,32 @@ void CMFCApplicationClientDlg::DefiningConditions(bool only_cpu, const char* ker
 
 void CMFCApplicationClientDlg::OnBnClickedButtonApplyNoise()
 {
-	// TODO: добавьте свой код обработчика уведомлений
+	if (m_pInputImage == nullptr) {
+		MessageBox(L"Upload the image first.", L"Warning", MB_ICONWARNING);
+		return;
+	}
+
+	Bitmap* clonedBitmap = m_pInputImage->Clone(0, 0, m_pInputImage->GetWidth(), m_pInputImage->GetHeight(), PixelFormat32bppARGB);
+	if (clonedBitmap == nullptr) {
+		MessageBox(L"Failed to clone the image.", L"Error", MB_ICONERROR);
+		return;
+	}
+
+	m_pOutputImage = nullptr;
+	m_pOutputImage = clonedBitmap;
+
+	int selectedIndex = m_pNoiseType.GetCurSel();
+	if (selectedIndex != CB_ERR)
+	{
+		CString selectedText;
+		m_pNoiseType.GetLBText(selectedIndex, selectedText);
+		if (selectedText == _T("Импульсный шум"))
+			ApplyImpulseNoise(*m_pInputImage, *m_pOutputImage, 0.05);
+		if (selectedText == _T("Гауссов шум"))
+			ApplyGaussianNoise(*m_pInputImage, *m_pOutputImage, m_nMeanNoise, m_nStdDevNoise);
+	}
+
+	DisplayImageInPictureControl(m_pOutputImage, IDC_OUTPUT_IMAGE);
 }
 
 
