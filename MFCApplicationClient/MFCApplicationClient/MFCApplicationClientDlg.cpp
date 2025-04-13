@@ -172,7 +172,7 @@ CMFCApplicationClientDlg::~CMFCApplicationClientDlg()
 	free(platforms);
 	free(devices);
 	delete m_pInputImage;
-	m_pOutputImage = nullptr;
+	delete m_pOutputImage;
 }
 
 void CMFCApplicationClientDlg::OnBnClickedButtonLoadImage()
@@ -245,74 +245,6 @@ void CMFCApplicationClientDlg::DisplayImageInPictureControl(Bitmap* image, int p
 	pictureGraphics.DrawImage(&сImage, 0, 0);
 	::ReleaseDC(pPictureCtrl->m_hWnd, hdc);
 }
-
-void CMFCApplicationClientDlg::ApplyImpulseNoise(Bitmap& source, Bitmap& destination, double noiseProbability)
-{
-	// Получаем размеры изображения
-	int width = source.GetWidth();
-	int height = source.GetHeight();
-	
-	// Подготавливаем данные для доступа к пикселям (блокировка)
-	BitmapData sourceData;
-	BitmapData destinationData;
-	Rect rect(0, 0, width, height);
-
-	source.LockBits(&rect, ImageLockModeRead, PixelFormat32bppARGB, &sourceData);
-	destination.LockBits(&rect, ImageLockModeWrite, PixelFormat32bppARGB, &destinationData);
-
-	// Получаем указатели на данные пикселей
-	BYTE* sourcePixels = (BYTE*)sourceData.Scan0;
-	BYTE* destinationPixels = (BYTE*)destinationData.Scan0;
-
-	// Вычисляем количество байт на строку
-	int stride = sourceData.Stride;
-
-	// Проходим по каждому пикселю
-	for (int y = 0; y < height; ++y)
-	{
-		for (int x = 0; x < width; ++x)
-		{
-			// Вычисляем индекс пикселя
-			int index = y * stride + x * 4; // 4 байта на пиксель (ARGB)
-
-			// Генерируем случайное число
-			double randomNumber = static_cast<double>(rand()) / RAND_MAX;
-
-			// Если случайное число меньше вероятности шума
-			if (randomNumber < noiseProbability)
-			{
-				// Создаем импульсный шум (черный или белый пиксель)
-				if (rand() % 2 == 0)
-				{
-					// Белый пиксель
-					destinationPixels[index + 0] = 255; // B
-					destinationPixels[index + 1] = 255; // G
-					destinationPixels[index + 2] = 255; // R
-				}
-				else
-				{
-					// Черный пиксель
-					destinationPixels[index + 0] = 0;   // B
-					destinationPixels[index + 1] = 0;   // G
-					destinationPixels[index + 2] = 0;   // R
-				}
-			}
-			else
-			{
-				// Копируем исходный пиксель
-				destinationPixels[index + 0] = sourcePixels[index + 0];
-				destinationPixels[index + 1] = sourcePixels[index + 1];
-				destinationPixels[index + 2] = sourcePixels[index + 2];
-			}
-			// Альфа канал (прозрачность) всегда копируется
-			destinationPixels[index + 3] = sourcePixels[index + 3];
-		}
-	}
-	// Разблокируем данные пикселей
-	source.UnlockBits(&sourceData);
-	destination.UnlockBits(&destinationData);
-}
-
 
 bool CMFCApplicationClientDlg::SaveBitmapToFile(Bitmap& bitmap, CString& sourceFilePath, const CString& appendedPartName)
 {
@@ -504,53 +436,6 @@ void CMFCApplicationClientDlg::OnLbnSelchangeDevicesList()
 	GetDlgItem(IDC_STATIC_OPENCL_STATUS)->SetWindowText(m_pOpenCLInitStatus);
 }
 
-void CMFCApplicationClientDlg::ApplyGaussianNoise(Bitmap& source, Bitmap& destination, double mean, double stddev)
-{
-	int width = source.GetWidth();
-	int height = source.GetHeight();
-
-	BitmapData sourceData;
-	BitmapData destinationData;
-	Rect rect(0, 0, width, height);
-
-	source.LockBits(&rect, ImageLockModeRead, PixelFormat32bppARGB, &sourceData);
-	destination.LockBits(&rect, ImageLockModeWrite, PixelFormat32bppARGB, &destinationData);
-
-	BYTE* sourcePixels = (BYTE*)sourceData.Scan0;
-	BYTE* destinationPixels = (BYTE*)destinationData.Scan0;
-
-	int stride = sourceData.Stride;
-
-	for (int y = 0; y < height; y++)
-	{
-		for (int x = 0; x < width; x++)
-		{
-			int idx = y * stride + x * 4;
-			for (int i = 0; i < 3; i++)
-			{
-				int pixelValue = sourcePixels[idx + i];
-				
-				double sum = 0.0;
-				for (int i = 0; i < 12; i++)
-					sum += (double)rand() / RAND_MAX;
-
-				double z0 = sum - 6.0;
-
-				double noise = z0 * stddev + mean;
-
-				int newPixelValue = (int)(pixelValue + noise);
-								
-				newPixelValue = max(0, min(255, newPixelValue));
-
-				destinationPixels[idx + i] = (BYTE)newPixelValue;
-			}
-			destinationPixels[idx + 3] = sourcePixels[idx + 3];
-		}
-	}
-	source.UnlockBits(&sourceData);
-	destination.UnlockBits(&destinationData);
-}
-
 void CMFCApplicationClientDlg::OnEnChangeEditMeanGaussianNoise()
 {
 	UpdateData(TRUE);
@@ -737,14 +622,38 @@ void CMFCApplicationClientDlg::OnBnClickedButtonApplyNoise()
 		return;
 	}
 
-	Bitmap* clonedBitmap = m_pInputImage->Clone(0, 0, m_pInputImage->GetWidth(), m_pInputImage->GetHeight(), PixelFormat32bppARGB);
+	int width = m_pInputImage->GetWidth();
+	int height = m_pInputImage->GetHeight();
+
+	BitmapData sourceData;
+	BitmapData destinationData;
+	Rect rect(0, 0, width, height);
+
+	Bitmap* clonedBitmap = m_pInputImage->Clone(0, 0, width, height, PixelFormat32bppARGB);
 	if (clonedBitmap == nullptr) {
 		MessageBox(L"Failed to clone the image.", L"Error", MB_ICONERROR);
 		return;
 	}
 
-	m_pOutputImage = nullptr;
-	m_pOutputImage = clonedBitmap;
+	m_pInputImage->LockBits(&rect, ImageLockModeRead, PixelFormat32bppARGB, &sourceData);
+	clonedBitmap->LockBits(&rect, ImageLockModeWrite, PixelFormat32bppARGB, &destinationData);
+
+	BYTE* sourcePixels = (BYTE*)sourceData.Scan0;
+	BYTE* destinationPixels = (BYTE*)destinationData.Scan0;
+
+	int stride = sourceData.Stride;
+
+	int count_channels;
+	switch (sourceData.PixelFormat)
+	{
+	case PixelFormat24bppRGB: count_channels = 3; break;
+	case PixelFormat32bppARGB: count_channels = 4; break;
+	case PixelFormat8bppIndexed: count_channels = 1; break;
+	default:
+		count_channels = 0;
+		MessageBox(L"Unsupported PixelFormat", L"Error", MB_ICONERROR);
+		exit(-1);
+	}
 
 	int selectedIndex = m_pNoiseType.GetCurSel();
 	if (selectedIndex != CB_ERR)
@@ -752,10 +661,73 @@ void CMFCApplicationClientDlg::OnBnClickedButtonApplyNoise()
 		CString selectedText;
 		m_pNoiseType.GetLBText(selectedIndex, selectedText);
 		if (selectedText == _T("Импульсный шум"))
-			ApplyImpulseNoise(*m_pInputImage, *m_pOutputImage, 0.05);
+		{
+			double Noise_Prob = 0.05;
+			// Проходим по каждому пикселю
+			for (int y = 0; y < height; ++y)
+			{
+				for (int x = 0; x < width; ++x)
+				{
+					// Вычисляем индекс пикселя
+					int index = y * stride + x * count_channels;
+					// Генерируем случайное число
+					double randomNumber = static_cast<double>(rand()) / RAND_MAX;
+
+					// Если случайное число меньше вероятности шума
+					if (randomNumber < Noise_Prob)
+					{
+						// Создаем импульсный шум (черный или белый пиксель)
+						if (rand() % 2 == 0)
+							for (int c = 0; c < count_channels; c++)
+								destinationPixels[index + c] = 255;
+						else
+							for (int c = 0; c < count_channels; c++)
+								destinationPixels[index + c] = 0;
+					}
+					else
+					{
+						for (int c = 0; c < count_channels; c++)
+							destinationPixels[index + c] = sourcePixels[index + c];
+					}
+					destinationPixels[index + 3] = sourcePixels[index + 3];
+				}
+			}
+		}
 		if (selectedText == _T("Гауссов шум"))
-			ApplyGaussianNoise(*m_pInputImage, *m_pOutputImage, m_nMeanNoise, m_nStdDevNoise);
+		{
+			for (int y = 0; y < height; y++)
+			{
+				for (int x = 0; x < width; x++)
+				{
+					int idx = y * stride + x * 4;
+					for (int c = 0; c < count_channels; c++)
+					{
+						int pixelValue = sourcePixels[idx + c];
+
+						double sum = 0.0;
+						for (int j = 0; j < 12; j++)
+							sum += (double)rand() / RAND_MAX;
+
+						double z0 = sum - 6.0;
+
+						double noise = z0 * m_nStdDevNoise + m_nMeanNoise;
+
+						int newPixelValue = (int)(pixelValue + noise);
+
+						newPixelValue = max(0, min(255, newPixelValue));
+
+						destinationPixels[idx + c] = (BYTE)newPixelValue;
+					}
+				}
+			}
+		}
+		m_pInputImage->UnlockBits(&sourceData);
+		clonedBitmap->UnlockBits(&destinationData);
 	}
+
+	if (m_pOutputImage != nullptr) delete m_pOutputImage;
+	m_pOutputImage = clonedBitmap->Clone(0, 0, width, height, PixelFormat32bppARGB);
+	delete clonedBitmap;
 
 	DisplayImageInPictureControl(m_pOutputImage, IDC_OUTPUT_IMAGE);
 }
