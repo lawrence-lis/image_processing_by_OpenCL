@@ -13,6 +13,7 @@ class CMFCApplicationClientDlg : public CDialogEx
 	DECLARE_DYNAMIC(CMFCApplicationClientDlg)			// Макрос, необходимый длядинамического создания объектов диалога
 
 private:
+	Bitmap* m_pStartImage; // Ввожу чтобы сохранить самое начальное изображение в памяти
 	Bitmap* m_pInputImage;
 	Bitmap* m_pOutputImage;
 
@@ -20,6 +21,7 @@ private:
 	CListBox m_pDeviceListBox; // Для устройств
 
 	CComboBox m_pNoiseType;
+	CComboBox m_pStatisticFilteringType;
 
 	float m_nMeanNoise;
 	float m_nStdDevNoise;
@@ -30,6 +32,7 @@ private:
 	CString m_pOpenCLInitStatus;
 	CString m_pProcessingDuration;
 	CString platformInfo, deviceInfo;
+	CStatic strStatisticCountCalculations;
 
 	bool toRewrite;										// Переписывать ли Picture Controle
 
@@ -47,8 +50,6 @@ private:
 	cl_program program;
 
 	void DisplayImageInPictureControl(Bitmap* image, int pictureControlID);			// Для отображения нового изображения в объекте Picture Control
-	void ApplyImpulseNoise(Bitmap& source, Bitmap& destination, double noiseProbability);		// Для наложения импульсного шума
-	void ApplyGaussianNoise(Bitmap& source, Bitmap& destination, double mean, double stddev);		// Для наложения гауссового шума
 	bool SaveBitmapToFile(Bitmap& bitmap, CString& sourceFilePath, const CString& appendedPartName);		// Для сохранения изображения в файл
 	Status GetEncoderClsid(const WCHAR* format, CLSID* pClsid);		// Вспомогательная функция для получения расширения файла изображения (Там немного мороки, но наверное это можно как-то заменить)
 	void SplitPath(CString& filePath, CString& folderPath, CString& fileName, CString& fileExt);		// Вспомогательная функция для разделения пути файла на части
@@ -58,8 +59,11 @@ private:
 	///		* only_cpu - флаг использования исключительно центрального процессора. В этом случае не производятся инициализация OpenCL и не используются никакие типы данных свойственных данному API.
 	///		* kernel_file_name - имя файла, содержащего код ядра для выполнения на устройстве OpenCL. Имеет расширение .cl. Либо строка, ч помощью которой можно использовать тот или иной метод обработки на CPU.
 	///		* kernel_function_name - имя функции, реализованной в коде ядра, которую будет выполнять устройство.
+	///		* is_statistic - флаг сбора статистических данных.
+	///		* stat_array - массив, куда будут записываться результаты подсчётов времени.
 	/// </summary>
-	void DefiningConditions(bool only_cpu, const char* kernel_file_name, const char* kernel_function_name);
+	void DefiningConditions(bool only_cpu, const char* kernel_file_name, const char* kernel_function_name, bool is_statistic, float* stat_array);
+	void ApplyNoise();
 
 	// Создание
 public:
@@ -88,12 +92,10 @@ protected:
 public:
 	afx_msg void OnBnClickedButtonLoadImage();
 	afx_msg void OnSize(UINT nType, int cx, int cy);
-	afx_msg void OnBnClickedButtonAddNoise();
 	afx_msg void OnBnClickedButtonMedianFiltering();
 	afx_msg void OnEnChangeEditMeadianFilterSize();
 	afx_msg void OnLbnSelchangePlatformsList();
 	afx_msg void OnLbnSelchangeDevicesList();
-	afx_msg void OnBnClickedButtonApplyGaussianNoise();
 	afx_msg void OnEnChangeEditMeanGaussianNoise();
 	afx_msg void OnEnChangeEditStddevGaussianNoise();
 	afx_msg void OnBnClickedButtonGaussianBlurFilter();

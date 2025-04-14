@@ -32,3 +32,4 @@ x64/
 *.ipch
 *.aps
 /ImageProcessingLib/ImageProcessingLib/Kernels
+/MFCApplicationClient/MFCApplicationClient/Statistics/*

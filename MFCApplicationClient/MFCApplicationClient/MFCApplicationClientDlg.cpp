@@ -10,6 +10,8 @@
 
 #include <ctime>
 #include <exception>
+#include <iostream>
+#include <fstream>
 
 #include "ProcessingLib.h"
 #include "cl_initialize.h"
@@ -30,6 +32,7 @@ IMPLEMENT_DYNAMIC(CMFCApplicationClientDlg, CDialogEx)
 
 CMFCApplicationClientDlg::CMFCApplicationClientDlg(CWnd* pParent /*=nullptr*/)
 	: CDialogEx(IDD_MFCAPPLICATIONCLIENT_DIALOG, pParent),
+	m_pStartImage(nullptr),
 	m_pInputImage(nullptr),
 	m_pOutputImage(nullptr),
 	toRewrite(true),
@@ -46,7 +49,7 @@ CMFCApplicationClientDlg::CMFCApplicationClientDlg(CWnd* pParent /*=nullptr*/)
 	m_nMeanNoise(0),
 	m_nStdDevNoise(30),
 	m_nMedianFilterSize(3),
-	m_nStatisticCountCalculations(1),
+	m_nStatisticCountCalculations(10),
 	m_pStatisticModeCheckBox(FALSE)
 {
 	m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
@@ -95,6 +98,7 @@ BOOL CMFCApplicationClientDlg::OnInitDialog()
 
 	// TODO: добавьте дополнительную инициализацию
 	srand(time(0));
+	m_pStartImage = nullptr;
 	m_pInputImage = nullptr;
 	m_pOutputImage = nullptr;
 	m_pPlatformListBox.SubclassDlgItem(IDC_PLATFORMS_LIST, this);
@@ -125,6 +129,32 @@ BOOL CMFCApplicationClientDlg::OnInitDialog()
 	m_pNoiseType.AddString(_T("Импульсный шум"));
 	m_pNoiseType.AddString(_T("Гауссов шум"));
 	m_pNoiseType.SetCurSel(0);
+
+	m_pStatisticFilteringType.SubclassDlgItem(IDC_COMBO_STATISTIC_FILTRATION_TYPE, this);
+	m_pStatisticFilteringType.AddString(_T("Медианная фильтрация на GPU"));
+	m_pStatisticFilteringType.AddString(_T("Медианная фильтрация на CPU"));
+	m_pStatisticFilteringType.AddString(_T("Фильтрация Гауссовым размытием на GPU"));
+	m_pStatisticFilteringType.AddString(_T("Фильтрация Гауссовым размытием на СPU"));
+	m_pStatisticFilteringType.ShowWindow(m_pStatisticModeCheckBox ? SW_SHOW : SW_HIDE);
+	m_pStatisticFilteringType.SetCurSel(0);
+
+	strStatisticCountCalculations.SubclassDlgItem(IDC_STATIC_STATISTIC_FILTRATION_TYPE, this);
+	strStatisticCountCalculations.ShowWindow(m_pStatisticModeCheckBox ? SW_SHOW : SW_HIDE);
+
+	CButton* b1 = (CButton*)GetDlgItem(IDC_BUTTON_MEDIAN_FILTERING_GPU);
+	b1->EnableWindow(!m_pStatisticModeCheckBox);
+
+	CButton* b2 = (CButton*)GetDlgItem(IDC_BUTTON_MEDIAN_FILTERING_CPU);
+	b2->EnableWindow(!m_pStatisticModeCheckBox);
+
+	CButton* b3 = (CButton*)GetDlgItem(IDC_BUTTON_GAUSSIAN_BLUR_FILTER_GPU);
+	b3->EnableWindow(!m_pStatisticModeCheckBox);
+
+	CButton* b4 = (CButton*)GetDlgItem(IDC_BUTTON_GAUSSIAN_BLUR_FILTER_CPU);
+	b4->EnableWindow(!m_pStatisticModeCheckBox);
+
+	CButton* b5 = (CButton*)GetDlgItem(IDC_BUTTON_CALCULATING_STATISTIC);
+	b5->EnableWindow(m_pStatisticModeCheckBox);
 
 	return TRUE;  // возврат значения TRUE, если фокус не передан элементу управления
 }
@@ -171,6 +201,7 @@ CMFCApplicationClientDlg::~CMFCApplicationClientDlg()
 {
 	free(platforms);
 	free(devices);
+	delete m_pStartImage;
 	delete m_pInputImage;
 	delete m_pOutputImage;
 }
@@ -185,17 +216,18 @@ void CMFCApplicationClientDlg::OnBnClickedButtonLoadImage()
 		m_originalImageFilePath = filePath;
 
 		// Загружаем изображение в m_pInputImage
-		delete m_pInputImage;	// Освобождение предыдущего изображения
+		delete m_pStartImage;	// Освобождение предыдущего изображения
 		if(m_pOutputImage != nullptr) m_pOutputImage = nullptr;;
-		m_pInputImage = Bitmap::FromFile(filePath);
-
+		m_pStartImage = Bitmap::FromFile(filePath);
 		// Проверка на ошибки после создания Bitmap
-		if (m_pInputImage != nullptr && m_pInputImage->GetLastStatus() != Ok) {
-			delete m_pInputImage;	// Освобождение памяти при ошибке
-			m_pInputImage = nullptr;	// Устанавливаем в nullptr для безопасности
+		if (m_pStartImage != nullptr && m_pStartImage->GetLastStatus() != Ok) {
+			delete m_pStartImage;	// Освобождение памяти при ошибке
+			m_pStartImage = nullptr;	// Устанавливаем в nullptr для безопасности
 			MessageBox(L"Error loading image.", L"Error", MB_ICONERROR);
 			return;
 		}
+
+		m_pInputImage = m_pStartImage->Clone(0, 0, m_pStartImage->GetWidth(), m_pStartImage->GetHeight(), m_pStartImage->GetPixelFormat());
 
 		DisplayImageInPictureControl(m_pInputImage, IDC_INPUT_IMAGE);
 	}
@@ -362,7 +394,7 @@ void CMFCApplicationClientDlg::SplitPath(CString& filePath, CString& folderPath,
 
 void CMFCApplicationClientDlg::OnBnClickedButtonMedianFiltering()
 {
-	DefiningConditions(false, "Kernels/Median_Filter.cl", "median_filter");
+	DefiningConditions(false, "Kernels/Median_Filter.cl", "median_filter", false, nullptr);
 }
 
 
@@ -449,18 +481,18 @@ void CMFCApplicationClientDlg::OnEnChangeEditStddevGaussianNoise()
 
 void CMFCApplicationClientDlg::OnBnClickedButtonGaussianBlurFilter()
 {
-	DefiningConditions(false, "Kernels/Kernel_Gaussian_Filter.cl", "gaussian_filter");
+	DefiningConditions(false, "Kernels/Kernel_Gaussian_Filter.cl", "gaussian_filter", false, nullptr);
 }
 
 
 void CMFCApplicationClientDlg::OnBnClickedButtonMedianFilteringCpu()
 {
-	DefiningConditions(true, "Median Filtering on CPU", nullptr);
+	DefiningConditions(true, "Median Filtering on CPU", nullptr, false, nullptr);
 }
 
 void CMFCApplicationClientDlg::OnBnClickedButtonGaussianBlurFilterCpu()
 {
-	DefiningConditions(true, "Gaussian Filtering on CPU", nullptr);
+	DefiningConditions(true, "Gaussian Filtering on CPU", nullptr, false, nullptr);
 }
 
 void CMFCApplicationClientDlg::OnBnClickedCheckStatisticMode()
@@ -472,6 +504,24 @@ void CMFCApplicationClientDlg::OnBnClickedCheckStatisticMode()
 
 	CProgressCtrl* pProgress = (CProgressCtrl*)GetDlgItem(IDC_PROGRESS_STATISTIC);
 	if (pProgress != nullptr) pProgress->ShowWindow(m_pStatisticModeCheckBox ? SW_SHOW : SW_HIDE);
+
+	CButton* b1 = (CButton*)GetDlgItem(IDC_BUTTON_MEDIAN_FILTERING_GPU);
+	b1->EnableWindow(!m_pStatisticModeCheckBox);
+
+	CButton* b2 = (CButton*)GetDlgItem(IDC_BUTTON_MEDIAN_FILTERING_CPU);
+	b2->EnableWindow(!m_pStatisticModeCheckBox);
+
+	CButton* b3 = (CButton*)GetDlgItem(IDC_BUTTON_GAUSSIAN_BLUR_FILTER_GPU);
+	b3->EnableWindow(!m_pStatisticModeCheckBox);
+
+	CButton* b4 = (CButton*)GetDlgItem(IDC_BUTTON_GAUSSIAN_BLUR_FILTER_CPU);
+	b4->EnableWindow(!m_pStatisticModeCheckBox);
+
+	CButton* b5 = (CButton*)GetDlgItem(IDC_BUTTON_CALCULATING_STATISTIC);
+	b5->EnableWindow(m_pStatisticModeCheckBox);
+
+	m_pStatisticFilteringType.ShowWindow(m_pStatisticModeCheckBox ? SW_SHOW : SW_HIDE);
+	strStatisticCountCalculations.ShowWindow(m_pStatisticModeCheckBox ? SW_SHOW : SW_HIDE);
 }
 
 void CMFCApplicationClientDlg::OnEnChangeEditSizeStatisticCountCalculations()
@@ -485,7 +535,7 @@ void CMFCApplicationClientDlg::OnEnChangeEditSizeStatisticCountCalculations()
 	}
 }
 
-void CMFCApplicationClientDlg::DefiningConditions(bool only_cpu, const char* kernel_file_name, const char* kernel_function_name)
+void CMFCApplicationClientDlg::DefiningConditions(bool only_cpu, const char* kernel_file_name, const char* kernel_function_name, bool is_statistic, float* stat_array)
 {
 	//	1. Проверка начальных условий.
 	//		1.1. Загружено ли обрабатываемое изображение?
@@ -547,16 +597,16 @@ void CMFCApplicationClientDlg::DefiningConditions(bool only_cpu, const char* ker
 	int width = m_pInputImage->GetWidth();
 	int height = m_pInputImage->GetHeight();
 	//		2.2. Подготавливаем данные, необходимые для прямого доступа к пикселям изображения.
-	BitmapData bitmapData;
+	BitmapData sourceData;
 	Rect rect(0, 0, width, height);
 	PixelFormat pixelFormat = m_pInputImage->GetPixelFormat();
 	//		2.3. Блокировка памяти для прямого доступа к пикселям изображения.
-	m_pInputImage->LockBits(&rect, ImageLockModeRead, pixelFormat, &bitmapData);
+	m_pInputImage->LockBits(&rect, ImageLockModeRead, PixelFormat32bppARGB, &sourceData);
 	//		2.4. Создание переменной для представления пиксельных данных.
-	BYTE* inputPixels = (BYTE*)bitmapData.Scan0;
+	BYTE* inputPixels = (BYTE*)sourceData.Scan0;
 	// 		2.5. Определяем количество каналов цвета в каждом пикселе, основываясь на формате пикселей исходного изображения.
 	int count_channels;
-	switch (bitmapData.PixelFormat)
+	switch (sourceData.PixelFormat)
 	{
 	case PixelFormat24bppRGB: count_channels = 3; break;
 	case PixelFormat32bppARGB: count_channels = 4; break;
@@ -567,11 +617,11 @@ void CMFCApplicationClientDlg::DefiningConditions(bool only_cpu, const char* ker
 		exit(-1);
 	}
 	// 		2.6. Создаём копию исходного изображения и подготавливаем данные для работы с новым изображением.
-	Bitmap* filteredBitmap = m_pInputImage->Clone(0, 0, width, height, pixelFormat);
+	Bitmap* filteredBitmap = m_pInputImage->Clone(0, 0, width, height, PixelFormat32bppARGB);
 	BitmapData filteredBitmapData;
 	Rect filteredRect(0, 0, width, height);
 	// 		2.7. Блокируем память для записи для прямого доступа в режиме записи, предоставляя возможность изменять пиксельные данные.
-	filteredBitmap->LockBits(&filteredRect, ImageLockModeWrite, pixelFormat, &filteredBitmapData);
+	filteredBitmap->LockBits(&filteredRect, ImageLockModeWrite, PixelFormat32bppARGB, &filteredBitmapData);
 	//		2.8. Создание переменной для представления пиксельных данных.
 	BYTE* outputPixels = (BYTE*)filteredBitmapData.Scan0;
 	//	3. Обработка. Непосредственно фильтрация
@@ -586,22 +636,24 @@ void CMFCApplicationClientDlg::DefiningConditions(bool only_cpu, const char* ker
 	else {
 		//		3.1.1. Осучществляем очистку выделенных ресурсов в случае ошибки, сообщаем об ошибке пользователю и завершаем работу приложения.
 		delete filteredBitmap;
-		m_pInputImage->UnlockBits(&bitmapData);
+		m_pInputImage->UnlockBits(&sourceData);
 		filteredBitmap->UnlockBits(&filteredBitmapData);
 		MessageBox(L"Не получилось выполнить обработку!", L"Error", MB_ICONERROR);
 		exit(-1);
 	}
 	//		3.2. Разблокировка памяти, которая была заблокирована для доступа к пиксельным данным. Предотвращает утечки памяти, даёт доступ к изображениям и является обязательной операцией после завершения работы
 	// с заблокированными пиксельными данными в GDI+
-	m_pInputImage->UnlockBits(&bitmapData);
+	m_pInputImage->UnlockBits(&sourceData);
 	filteredBitmap->UnlockBits(&filteredBitmapData);
 	//		3.3. Освобождаем старое выходное изображение и заменяем его обработанным. И отображаем
 	if (m_pOutputImage != nullptr) delete m_pOutputImage;
-	m_pOutputImage = filteredBitmap->Clone(0, 0, width, height, pixelFormat);
+	m_pOutputImage = filteredBitmap->Clone(0, 0, width, height, PixelFormat32bppARGB);
 	DisplayImageInPictureControl(m_pOutputImage, IDC_OUTPUT_IMAGE);
 	//		3.4. Удаляем копию исходного изображения. Освобождаем память.
 	delete filteredBitmap;
 	//		3.5. Выводим получившееся время обработки.
+	if (is_statistic)
+			*stat_array = duration / 1000000.f;
 	m_pProcessingDuration.Format(_T("Время обработки: %.4f мс"), duration / 1000000.f);
 	GetDlgItem(IDC_STATIC_PROCESSING_DURATION)->SetWindowText(m_pProcessingDuration);
 	//	4. Освобождаем ресурсы, выделенные на реализацию функционала OpenCL, если не был передан флаг об использовании только CPU.
@@ -617,26 +669,105 @@ void CMFCApplicationClientDlg::DefiningConditions(bool only_cpu, const char* ker
 
 void CMFCApplicationClientDlg::OnBnClickedButtonApplyNoise()
 {
-	if (m_pInputImage == nullptr) {
+	ApplyNoise();
+}
+
+
+void CMFCApplicationClientDlg::OnBnClickedButtonCalculatingStatistic()
+{
+	float stats;
+	std::ofstream outfile;
+	int selectedIndex = m_pStatisticFilteringType.GetCurSel();
+	CString selectedText;
+	m_pStatisticFilteringType.GetLBText(selectedIndex, selectedText);
+	if (selectedText == _T("Медианная фильтрация на GPU"))
+	{
+		outfile.open("Statistics/MedianFiltering_GPU.csv");
+		if (!outfile.is_open()) {
+			MessageBox(L"Не удалось открыть файл для записи статистики", L"Warning", MB_ICONWARNING);
+			exit(-1);
+		}
+	}
+	if (selectedText == _T("Медианная фильтрация на CPU"))
+	{
+		outfile.open("Statistics/MedianFiltering_CPU.csv");
+		if (!outfile.is_open()) {
+			MessageBox(L"Не удалось открыть файл для записи статистики", L"Warning", MB_ICONWARNING);
+			exit(-1);
+		}
+	}
+	if (selectedText == _T("Фильтрация Гауссовым размытием на GPU"))
+	{
+		outfile.open("Statistics/GaussianBlurFiltering_GPU.csv");
+		if (!outfile.is_open()) {
+			MessageBox(L"Не удалось открыть файл для записи статистики", L"Warning", MB_ICONWARNING);
+			exit(-1);
+		}
+	}
+	if (selectedText == _T("Фильтрация Гауссовым размытием на СPU"))
+	{
+		outfile.open("Statistics/GaussianBlurFiltering_CPU.csv");
+		if (!outfile.is_open()) {
+			MessageBox(L"Не удалось открыть файл для записи статистики", L"Warning", MB_ICONWARNING);
+			exit(-1);
+		}
+	}
+
+	CProgressCtrl* pProgress = (CProgressCtrl*)GetDlgItem(IDC_PROGRESS_STATISTIC);
+	for (int i = 0; i < m_nStatisticCountCalculations; i++)
+	{
+		ApplyNoise();
+		if (selectedText == _T("Медианная фильтрация на GPU"))
+		{
+			DefiningConditions(false, "Kernels/Median_Filter.cl", "median_filter", true, &stats);
+			outfile << stats << std::endl;
+		}
+		if (selectedText == _T("Медианная фильтрация на CPU"))
+		{
+			DefiningConditions(true, "Median Filtering on CPU", nullptr, true, &stats);
+			outfile << stats << std::endl;
+		}
+		if (selectedText == _T("Фильтрация Гауссовым размытием на GPU"))
+		{
+			DefiningConditions(false, "Kernels/Kernel_Gaussian_Filter.cl", "gaussian_filter", true, &stats);
+			outfile << stats << std::endl;
+		}
+		if (selectedText == _T("Фильтрация Гауссовым размытием на СPU"))
+		{
+			DefiningConditions(true, "Gaussian Filtering on CPU", nullptr, true, &stats);
+			outfile << stats << std::endl;
+		}
+		pProgress->SetPos((i + 1) * (m_nStatisticCountCalculations));
+	}
+	outfile.close();
+}
+
+void CMFCApplicationClientDlg::ApplyNoise()
+{
+
+	if (m_pStartImage == nullptr) {
 		MessageBox(L"Upload the image first.", L"Warning", MB_ICONWARNING);
 		return;
 	}
 
-	int width = m_pInputImage->GetWidth();
-	int height = m_pInputImage->GetHeight();
+	DisplayImageInPictureControl(m_pStartImage, IDC_INPUT_IMAGE);
+
+	int width = m_pStartImage->GetWidth();
+	int height = m_pStartImage->GetHeight();
 
 	BitmapData sourceData;
 	BitmapData destinationData;
 	Rect rect(0, 0, width, height);
+	PixelFormat pixelFormat = m_pInputImage->GetPixelFormat();
 
-	Bitmap* clonedBitmap = m_pInputImage->Clone(0, 0, width, height, PixelFormat32bppARGB);
+	Bitmap* clonedBitmap = m_pStartImage->Clone(0, 0, width, height, pixelFormat);
 	if (clonedBitmap == nullptr) {
 		MessageBox(L"Failed to clone the image.", L"Error", MB_ICONERROR);
 		return;
 	}
 
-	m_pInputImage->LockBits(&rect, ImageLockModeRead, PixelFormat32bppARGB, &sourceData);
-	clonedBitmap->LockBits(&rect, ImageLockModeWrite, PixelFormat32bppARGB, &destinationData);
+	m_pStartImage->LockBits(&rect, ImageLockModeRead, pixelFormat, &sourceData);
+	clonedBitmap->LockBits(&rect, ImageLockModeWrite, pixelFormat, &destinationData);
 
 	BYTE* sourcePixels = (BYTE*)sourceData.Scan0;
 	BYTE* destinationPixels = (BYTE*)destinationData.Scan0;
@@ -689,7 +820,6 @@ void CMFCApplicationClientDlg::OnBnClickedButtonApplyNoise()
 						for (int c = 0; c < count_channels; c++)
 							destinationPixels[index + c] = sourcePixels[index + c];
 					}
-					destinationPixels[index + 3] = sourcePixels[index + 3];
 				}
 			}
 		}
@@ -699,7 +829,7 @@ void CMFCApplicationClientDlg::OnBnClickedButtonApplyNoise()
 			{
 				for (int x = 0; x < width; x++)
 				{
-					int idx = y * stride + x * 4;
+					int idx = y * stride + x * count_channels;
 					for (int c = 0; c < count_channels; c++)
 					{
 						int pixelValue = sourcePixels[idx + c];
@@ -721,19 +851,14 @@ void CMFCApplicationClientDlg::OnBnClickedButtonApplyNoise()
 				}
 			}
 		}
-		m_pInputImage->UnlockBits(&sourceData);
+		m_pStartImage->UnlockBits(&sourceData);
 		clonedBitmap->UnlockBits(&destinationData);
 	}
 
 	if (m_pOutputImage != nullptr) delete m_pOutputImage;
-	m_pOutputImage = clonedBitmap->Clone(0, 0, width, height, PixelFormat32bppARGB);
+	m_pOutputImage = clonedBitmap->Clone(0, 0, width, height, pixelFormat);
 	delete clonedBitmap;
 
+	toRewrite = true;
 	DisplayImageInPictureControl(m_pOutputImage, IDC_OUTPUT_IMAGE);
-}
-
-
-void CMFCApplicationClientDlg::OnBnClickedButtonCalculatingStatistic()
-{
-	// TODO: добавьте свой код обработчика уведомлений
 }
