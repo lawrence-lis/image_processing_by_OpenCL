@@ -675,43 +675,10 @@ void CMFCApplicationClientDlg::OnBnClickedButtonApplyNoise()
 
 void CMFCApplicationClientDlg::OnBnClickedButtonCalculatingStatistic()
 {
-	float stats;
-	std::ofstream outfile;
+	float* stats = new float[m_nStatisticCountCalculations];
 	int selectedIndex = m_pStatisticFilteringType.GetCurSel();
 	CString selectedText;
 	m_pStatisticFilteringType.GetLBText(selectedIndex, selectedText);
-	if (selectedText == _T("Медианная фильтрация на GPU"))
-	{
-		outfile.open("Statistics/MedianFiltering_GPU.csv");
-		if (!outfile.is_open()) {
-			MessageBox(L"Не удалось открыть файл для записи статистики", L"Warning", MB_ICONWARNING);
-			exit(-1);
-		}
-	}
-	if (selectedText == _T("Медианная фильтрация на CPU"))
-	{
-		outfile.open("Statistics/MedianFiltering_CPU.csv");
-		if (!outfile.is_open()) {
-			MessageBox(L"Не удалось открыть файл для записи статистики", L"Warning", MB_ICONWARNING);
-			exit(-1);
-		}
-	}
-	if (selectedText == _T("Фильтрация Гауссовым размытием на GPU"))
-	{
-		outfile.open("Statistics/GaussianBlurFiltering_GPU.csv");
-		if (!outfile.is_open()) {
-			MessageBox(L"Не удалось открыть файл для записи статистики", L"Warning", MB_ICONWARNING);
-			exit(-1);
-		}
-	}
-	if (selectedText == _T("Фильтрация Гауссовым размытием на СPU"))
-	{
-		outfile.open("Statistics/GaussianBlurFiltering_CPU.csv");
-		if (!outfile.is_open()) {
-			MessageBox(L"Не удалось открыть файл для записи статистики", L"Warning", MB_ICONWARNING);
-			exit(-1);
-		}
-	}
 
 	CProgressCtrl* pProgress = (CProgressCtrl*)GetDlgItem(IDC_PROGRESS_STATISTIC);
 	for (int i = 0; i < m_nStatisticCountCalculations; i++)
@@ -719,27 +686,46 @@ void CMFCApplicationClientDlg::OnBnClickedButtonCalculatingStatistic()
 		ApplyNoise();
 		if (selectedText == _T("Медианная фильтрация на GPU"))
 		{
-			DefiningConditions(false, "Kernels/Median_Filter.cl", "median_filter", true, &stats);
-			outfile << stats << std::endl;
+			DefiningConditions(false, "Kernels/Median_Filter.cl", "median_filter", true, &stats[i]);
 		}
 		if (selectedText == _T("Медианная фильтрация на CPU"))
 		{
-			DefiningConditions(true, "Median Filtering on CPU", nullptr, true, &stats);
-			outfile << stats << std::endl;
+			DefiningConditions(true, "Median Filtering on CPU", nullptr, true, &stats[i]);
 		}
 		if (selectedText == _T("Фильтрация Гауссовым размытием на GPU"))
 		{
-			DefiningConditions(false, "Kernels/Kernel_Gaussian_Filter.cl", "gaussian_filter", true, &stats);
-			outfile << stats << std::endl;
+			DefiningConditions(false, "Kernels/Kernel_Gaussian_Filter.cl", "gaussian_filter", true, &stats[i]);
 		}
 		if (selectedText == _T("Фильтрация Гауссовым размытием на СPU"))
 		{
-			DefiningConditions(true, "Gaussian Filtering on CPU", nullptr, true, &stats);
-			outfile << stats << std::endl;
+			DefiningConditions(true, "Gaussian Filtering on CPU", nullptr, true, &stats[i]);
 		}
 		pProgress->SetPos((i + 1) * (m_nStatisticCountCalculations));
 	}
-	outfile.close();
+	// Сортировка
+	for (int i = 0; i < m_nStatisticCountCalculations - 1; i++)
+	{
+		for (int j = 0; j < m_nStatisticCountCalculations - i - 1; j++)
+		{
+			if (stats[j] > stats[j + 1])
+			{
+				std::swap(stats[j], stats[j + 1]);
+			}
+		}
+	}
+	// Нахождение медианы
+	float median;
+	if (m_nStatisticCountCalculations % 2 == 0) 
+	{
+		median = (stats[m_nStatisticCountCalculations / 2 - 1] + stats[m_nStatisticCountCalculations / 2]) / 2.f;
+	}
+	else
+	{
+		median = stats[m_nStatisticCountCalculations / 2];
+	}
+	m_pProcessingDuration.Format(_T("Медианное время обработки: %.4f мс"), median);
+	GetDlgItem(IDC_STATIC_PROCESSING_DURATION)->SetWindowText(m_pProcessingDuration);
+	delete[] stats;
 }
 
 void CMFCApplicationClientDlg::ApplyNoise()
