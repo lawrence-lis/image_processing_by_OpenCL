@@ -178,33 +178,43 @@ char* read_kernel_source(const char* filename, size_t* source_size)
     }
     source_str[0] = '\0'; // Инициализируем как пустую строку
     size_t i = 0;
-    char c;
+    int c; // Тип int для корректной обработки EOF
     // Читаем содержимое файла в строку
     // Читаем файл посимвольно
     while ((c = fgetc(fp)) != EOF) {
+        // Проверяем, что fgetc не вернул ошибку
+        if (ferror(fp)) {
+            fprintf(stderr, "Error reading from file: %s\n\tProblem area: the \"read_kernel_source\" function\n\n", filename);
+            free(source_str);
+            fclose(fp);
+            return NULL;
+        }
         // Увеличиваем размер буфера, если необходимо
         if (i + 1 >= current_size) {
-            current_size *= 2; // Удваиваем размер
-            source_str = (char*)realloc(source_str, current_size);
-            if (source_str == NULL) {
+            size_t new_size = current_size * 2;
+            char* temp = (char*)realloc(source_str, new_size);
+            if (temp == NULL) {
                 printf("Couldn't reallocate the memory for the kernel code.\n\tProblem area: the \"read_kernel_source\" function\n\n");
                 fclose(fp);
                 return NULL;
             }
+            source_str = temp;
+            current_size = new_size;
         }
         // Добавляем символ в строку
-        source_str[i++] = c;
+        source_str[i++] = (char)c;
         source_str[i] = '\0';
     }
     fclose(fp);
-    *source_size = strlen(source_str);
+    // Устанавливаем размер строки и возвращаем указатель
+    *source_size = i; // Размер строки равен количеству прочитанных символов
     return source_str;
 }
 
 // Функция для создания объекта cl_program из файла
 cl_program cl_runtime_create_program_from_file(cl_context context, const char* filename)
 {
-    cl_program program;
+    cl_program program = NULL;
     cl_int err;
     size_t source_size;
     // Читаем код ядра из файла
@@ -214,7 +224,7 @@ cl_program cl_runtime_create_program_from_file(cl_context context, const char* f
         return NULL;
     }
     // Создаем объект cl_program из кода ядра
-    const char* source_ptr = (const char*)source_str; // Преобразуем char* в const char*
+    const char* source_ptr = source_str; // Преобразуем char* в const char*
     program = clCreateProgramWithSource(context, 1, &source_ptr, &source_size, &err);
     switch (err)
     {
@@ -440,6 +450,7 @@ cl_int cl_runtime_enqueue_kernel(cl_kernel kernel, cl_command_queue queue, cl_ui
         sub_err = clWaitForEvents(1, &event);
 
         cl_ulong start_time, end_time;
+        clFinish(queue);
         sub_err = clGetEventProfilingInfo(event, CL_PROFILING_COMMAND_START, sizeof(cl_ulong), &start_time, NULL);
         sub_err = clGetEventProfilingInfo(event, CL_PROFILING_COMMAND_END, sizeof(cl_ulong), &end_time, NULL);
 

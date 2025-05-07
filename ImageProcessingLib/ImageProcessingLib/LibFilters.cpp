@@ -3,15 +3,34 @@
 #include "LibFilters.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <algorithm>
 
 size_t RoundUp(size_t group_size, cl_int global_size)
 {
-    // Округление для рабочих групп
     int r = global_size % group_size;
     if (r == 0)
         return global_size;
     else
         return global_size + group_size - r;
+}
+
+// Вспомогательная функция для расчета оптимального размера локальной рабочей группы
+// на основе размеров изображения и максимального размера группы.
+// 32 - для моей видеокарты.
+size_t GetOptimalLocalWorkGroupSize(size_t w_h, size_t max_group_size = 32)
+{
+    if (w_h <= max_group_size ) {
+        return w_h; // Если изображение маленькое, используем все элементы
+    }
+
+    // Выбираем размер группы, который является саксимально делимым нацело от ширины или высоты.
+    size_t best_size = 1;
+    for (int cur_size = 1; cur_size <= max_group_size; cur_size++) {
+        if (w_h % cur_size == 0)
+            best_size = cur_size;
+    }
+
+    return best_size;
 }
 
 bool medianFilter(BYTE* inputPixels, BYTE* outputPixels, int ImageWidth, int ImageHeight, int ImageChannels, int kernelSize, cl_command_queue commandQueue, cl_kernel kernel, cl_context context, cl_sampler sampler, cl_ulong * dur)
@@ -124,7 +143,7 @@ bool medianFilter(BYTE* inputPixels, BYTE* outputPixels, int ImageWidth, int Ima
     }
 
     // 4. Запускаем ядро
-    size_t localWorkSize[2] = { 16, 16 };
+    size_t localWorkSize[2] = { GetOptimalLocalWorkGroupSize(ImageWidth), GetOptimalLocalWorkGroupSize(ImageHeight) };
     size_t globalWorkSize[2] = { RoundUp(localWorkSize[0], ImageWidth), RoundUp(localWorkSize[1], ImageHeight) };
 
     if (cl_runtime_enqueue_kernel(kernel, commandQueue, 2, globalWorkSize, localWorkSize, dur) != 0) {
@@ -282,7 +301,7 @@ bool gaussianBlurFilter(BYTE* inputPixels, BYTE* outputPixels, int ImageWidth, i
     }
 
     // 5. Запускаем ядро
-    size_t localWorkSize[2] = { 16, 16 };
+    size_t localWorkSize[2] = { GetOptimalLocalWorkGroupSize(ImageWidth), GetOptimalLocalWorkGroupSize(ImageHeight) };
     size_t globalWorkSize[2] = { RoundUp(localWorkSize[0], ImageWidth), RoundUp(localWorkSize[1], ImageHeight) };
 
     if (cl_runtime_enqueue_kernel(kernel, commandQueue, 2, globalWorkSize, localWorkSize, dur) != 0) {
@@ -300,6 +319,8 @@ bool gaussianBlurFilter(BYTE* inputPixels, BYTE* outputPixels, int ImageWidth, i
         printf("OpenCL output buffer could not be read.\n");
         clReleaseMemObject(outputImage);
         clReleaseMemObject(inputImage);
+        clReleaseMemObject(kernelBuffer);
+        free(gaussianMask);
         return false;
     }
 

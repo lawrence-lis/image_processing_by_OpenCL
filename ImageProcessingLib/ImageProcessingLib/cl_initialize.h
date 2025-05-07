@@ -63,7 +63,7 @@ extern "C" PROCESSINGLIBRARY_API void cl_init_device_get_info(cl_device_id devic
 	Параметры:
 	* devices - массив устройств, для которого создаётся контекст
 	* num_devices - количество устройств, для которых создаётся контекст*/
-extern "C" PROCESSINGLIBRARY_API cl_context cl_init_create_context_by_devices(cl_device_id * devices, cl_uint num_devices);
+extern "C" PROCESSINGLIBRARY_API cl_context cl_init_create_context_by_devices(cl_platform_id platform, cl_device_id * devices, cl_uint num_devices);
 
 /* Функция, создающая контекст для всех устройств заданного типа
 	Параметры:

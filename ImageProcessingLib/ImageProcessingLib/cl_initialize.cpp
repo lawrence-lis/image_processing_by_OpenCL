@@ -405,11 +405,12 @@ void cl_init_device_get_info(cl_device_id device, cl_device_info info, const cha
 /*   Работа с контекстом   */
 
 // Функция, создающая контекст на основе списка конкретных устройств
-cl_context cl_init_create_context_by_devices(cl_device_id* devices, cl_uint num_devices)
+cl_context cl_init_create_context_by_devices(cl_platform_id platform, cl_device_id* devices, cl_uint num_devices)
 {
 	// Создаем контекст OpenCL
 	cl_int err;
-	cl_context context = clCreateContext(NULL, num_devices, devices, NULL, NULL, &err);
+	cl_context_properties properties[] = { CL_CONTEXT_PLATFORM, (cl_context_properties)platform, 0 };
+	cl_context context = clCreateContext(properties, num_devices, devices, NULL, NULL, &err);
 	switch (err)
 	{
 	case CL_SUCCESS:

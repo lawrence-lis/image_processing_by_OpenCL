@@ -278,120 +278,6 @@ void CMFCApplicationClientDlg::DisplayImageInPictureControl(Bitmap* image, int p
 	::ReleaseDC(pPictureCtrl->m_hWnd, hdc);
 }
 
-bool CMFCApplicationClientDlg::SaveBitmapToFile(Bitmap& bitmap, CString& sourceFilePath, const CString& appendedPartName)
-{
-	// 1. Получаем информацию об исходном файле
-	CString folderPath, fileName, fileExt;
-	SplitPath(sourceFilePath, folderPath, fileName, fileExt);
-
-	sourceFilePath = folderPath + L"\\" + fileName + appendedPartName + fileExt;
-
-	// 2. Создаем новое имя файла
-	CString newFileName = sourceFilePath;
-
-	// 3. Определяем формат файла (CLSID энкодера)
-	CLSID encoderClsid;
-	CString mimeType;
-	if (fileExt.CompareNoCase(L".bmp") == 0)
-		mimeType = L"image/bmp";
-	else if (fileExt.CompareNoCase(L".jpg") == 0 || fileExt.CompareNoCase(L".jpeg") == 0)
-		mimeType = L"image/jpeg";
-	else if (fileExt.CompareNoCase(L".png") == 0)
-		mimeType = L"image/png";
-	else if (fileExt.CompareNoCase(L".gif") == 0)
-		mimeType = L"image/gif";
-	else
-	{
-		MessageBox(L"Unsupported file format.", L"Error", MB_ICONERROR);
-		return false;
-	}
-
-	if (GetEncoderClsid(mimeType, &encoderClsid) != Ok)
-	{
-		MessageBox(L"Couldn't find the encoder for this format.", L"Error", MB_ICONERROR);
-		return false;
-	}
-	// 4. Сохраняем bitmap в файл
-	if (bitmap.Save(newFileName, &encoderClsid, NULL) != Ok)
-	{
-		MessageBox(L"Couldn't save image.", L"Error", MB_ICONERROR);
-		return false;
-	}
-	return true;
-}
-
-Status CMFCApplicationClientDlg::GetEncoderClsid(const WCHAR* format, CLSID* pClsid)
-{
-	UINT  numEncoders = 0;          // количество кодеров изображения
-	UINT  size = 0;					// размер массива кодировщиков изображений в байтах
-
-	ImageCodecInfo* pImageCodecInfo = NULL;
-	Status  status;
-
-	status = GetImageEncodersSize(&numEncoders, &size);
-	if (status != Ok)
-	{
-		TRACE(L"GetImageEncodersSize failed with status: %d\n", status);
-		return status;
-	}
-
-	if (size == 0) {
-		TRACE(L"No image encoders found.\n");
-		return GenericError;
-	}
-
-	pImageCodecInfo = (ImageCodecInfo*)(malloc(size));
-	if (pImageCodecInfo == NULL)
-	{
-		TRACE(L"Memory allocation failed.\n");
-		return OutOfMemory;
-	}
-
-	status = GetImageEncoders(numEncoders, size, pImageCodecInfo);
-	if (status != Ok)
-	{
-		TRACE(L"GetImageEncoders failed with status: %d\n", status);
-		free(pImageCodecInfo);
-		return status;
-	}
-
-	for (UINT j = 0; j < numEncoders; ++j)
-	{
-		if (wcscmp(pImageCodecInfo[j].MimeType, format) == 0)
-		{
-			*pClsid = pImageCodecInfo[j].Clsid;
-			free(pImageCodecInfo);
-			return Ok;
-		}
-	}
-	free(pImageCodecInfo);
-	TRACE(L"Encoder not found for format: %s\n", format);
-	return GenericError;
-}
-
-void CMFCApplicationClientDlg::SplitPath(CString& filePath, CString& folderPath, CString& fileName, CString& fileExt)
-{
-	int lastSlash = filePath.ReverseFind(L'\\');
-	if (lastSlash != -1)
-	{
-		folderPath = filePath.Left(lastSlash);
-		fileName = filePath.Mid(lastSlash + 1);
-	}
-	else
-	{
-		folderPath = L"";
-		fileName = filePath;
-	}
-
-	int lastDot = fileName.ReverseFind(L'.');
-	if (lastDot != -1)
-	{
-		fileExt = fileName.Mid(lastDot);
-		fileName = fileName.Left(lastDot);
-	}
-	else fileExt = L"";
-}
-
 void CMFCApplicationClientDlg::OnBnClickedButtonMedianFiltering()
 {
 	DefiningConditions(false, "Kernels/Median_Filter.cl", "median_filter", false, nullptr);
@@ -571,7 +457,7 @@ void CMFCApplicationClientDlg::DefiningConditions(bool only_cpu, const char* ker
 		//			1.3.1.3. Обрабатыается случай, когда клиент не выбрал устройство. Выбирается первое доступное устройство OpenCL.
 		if (deviceId == NULL) deviceId = devices[0];
 		//			1.3.1.4. Создаётся объект контекста работы OpenCL на основе доступных устройств.
-		context = cl_init_create_context_by_devices(devices, numDevices);
+		context = cl_init_create_context_by_devices(platformId, devices, numDevices);
 		//			1.3.1.5. Создвётся очередь комманд для текущего контекста OpenCL и выбранного устройства.
 		commandQueue = cl_runtime_create_command_queue(context, deviceId);
 		//			1.3.1.6. Проверка, поддерживается ли изображения устройством, в противном случае - приложение прекратит свою работу.

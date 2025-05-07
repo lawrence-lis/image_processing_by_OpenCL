@@ -50,9 +50,6 @@ private:
 	cl_program program;
 
 	void DisplayImageInPictureControl(Bitmap* image, int pictureControlID);			// Для отображения нового изображения в объекте Picture Control
-	bool SaveBitmapToFile(Bitmap& bitmap, CString& sourceFilePath, const CString& appendedPartName);		// Для сохранения изображения в файл
-	Status GetEncoderClsid(const WCHAR* format, CLSID* pClsid);		// Вспомогательная функция для получения расширения файла изображения (Там немного мороки, но наверное это можно как-то заменить)
-	void SplitPath(CString& filePath, CString& folderPath, CString& fileName, CString& fileExt);		// Вспомогательная функция для разделения пути файла на части
 	/// <summary>
 	/// Вспомогательная функция для обработки изображений.
 	/// Параметры:
