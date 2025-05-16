@@ -20,3 +20,5 @@
 extern "C" PROCESSINGLIBRARY_API bool medianFilter(BYTE * inputPixels, BYTE * outputPixels, int ImageWidth, int ImageHeight, int ImageChannels, int kernelSize, cl_command_queue commandQueue, cl_kernel kernel, cl_context context, cl_sampler sampler, cl_ulong * dur);
 
 extern "C" PROCESSINGLIBRARY_API bool gaussianBlurFilter(BYTE * inputPixels, BYTE * outputPixels, int ImageWidth, int ImageHeight, int ImageChannels, cl_command_queue commandQueue, cl_kernel kernel, cl_context context, cl_sampler sampler, cl_ulong * dur);
+
+extern "C" PROCESSINGLIBRARY_API bool detectEdges(BYTE * inputPixels, BYTE * outputPixels, int edge_detecting_mode, int ImageWidth, int ImageHeight, int ImageChannels, cl_command_queue commandQueue, cl_kernel kernel, cl_context context, cl_sampler sampler, cl_ulong * dur);

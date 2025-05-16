@@ -113,6 +113,179 @@ cl_mem cl_runtime_create_image_for_writing(cl_context context, cl_image_format* 
     return cl_runtime_create_image(context, CL_MEM_WRITE_ONLY, format, w, h);
 }
 
+// Функция, которая освобождает объект памяти OpenCL
+void cl_runtime_release_mem_object(cl_mem mem_obj)
+{
+    switch (clReleaseMemObject(mem_obj))
+    {
+    case CL_SUCCESS:
+        return;
+    case CL_INVALID_MEM_OBJECT:
+        exit(-109);
+    case CL_OUT_OF_RESOURCES:
+        exit(-106);
+    case CL_OUT_OF_HOST_MEMORY:
+        exit(-1031);
+    }
+}
+
+// Функция, которая создает объект буфера OpenCL
+cl_mem cl_runtime_create_buffer(cl_context context, cl_mem_flags flags, size_t size, void* host_ptr)
+{
+    cl_int err;
+    cl_mem res = clCreateBuffer(context, flags, size, host_ptr, &err);
+    switch (err) 
+    {
+    case CL_SUCCESS:
+        return res;
+    case CL_INVALID_CONTEXT:
+        printf("Error code: -303");
+        break;
+    case CL_INVALID_PROPERTY:
+        printf("Error code: -308");
+        break;
+    case CL_INVALID_VALUE:
+        printf("Error code: -311");
+        break;
+    case CL_INVALID_BUFFER_SIZE:
+        printf("Error code: -314");
+        break;
+    case CL_INVALID_HOST_PTR:
+        printf("Error code: -320");
+        break;
+    case CL_MEM_OBJECT_ALLOCATION_FAILURE:
+        printf("Error code: -326");
+        break;
+    case CL_OUT_OF_RESOURCES:
+        printf("Error code: -330");
+        break;
+    case CL_OUT_OF_HOST_MEMORY:
+        printf("Error code: -339");
+        break;
+    case CL_INVALID_DEVICE:
+        printf("Error code: -342");
+        break;
+    case CL_INVALID_OPERATION:
+        printf("Error code: -347");
+        break;
+    }
+    return NULL;
+}
+
+// Функция, которая безопасно и удобно считывает данные из cl_mem (изображения) обратно на хост (CPU)
+bool cl_runtime_read_image(cl_command_queue command_queue, cl_mem image, size_t origin[3], size_t region[3], void* host_ptr, size_t host_buffer_size)
+{
+    size_t row_pitch; // Байт на строку
+    size_t elem_size; // Размер элемента изображения (в байтах)
+    size_t image_width; // Ширина изображения
+    size_t image_height; // Высота изображения
+
+    switch (clGetImageInfo(image, CL_IMAGE_ROW_PITCH, sizeof(row_pitch), &row_pitch, NULL))
+    {
+    case CL_SUCCESS:
+        break;
+    case CL_INVALID_MEM_OBJECT:
+        printf("Error code: -501");
+        return false;
+    case CL_INVALID_VALUE:
+        printf("Error code: -502");
+        return false;
+    case CL_OUT_OF_RESOURCES:
+        printf("Error code: -503");
+        return false;
+    case CL_OUT_OF_HOST_MEMORY:
+        printf("Error code: -504");
+        return false;
+    }
+
+    switch (clGetImageInfo(image, CL_IMAGE_ELEMENT_SIZE, sizeof(elem_size), &elem_size, NULL))
+    {
+    case CL_SUCCESS:
+        break;
+    case CL_INVALID_MEM_OBJECT:
+        printf("Error code: -511");
+        return false;
+    case CL_INVALID_VALUE:
+        printf("Error code: -512");
+        return false;
+    case CL_OUT_OF_RESOURCES:
+        printf("Error code: -513");
+        return false;
+    case CL_OUT_OF_HOST_MEMORY:
+        printf("Error code: -514");
+        return false;
+    }
+
+    switch (clGetImageInfo(image, CL_IMAGE_WIDTH, sizeof(image_width), &image_width, NULL))
+    {
+    case CL_SUCCESS:
+        break;
+    case CL_INVALID_MEM_OBJECT:
+        printf("Error code: -521");
+        return false;
+    case CL_INVALID_VALUE:
+        printf("Error code: -522");
+        return false;
+    case CL_OUT_OF_RESOURCES:
+        printf("Error code: -523");
+        return false;
+    case CL_OUT_OF_HOST_MEMORY:
+        printf("Error code: -524");
+        return false;
+    }
+
+    switch (clGetImageInfo(image, CL_IMAGE_HEIGHT, sizeof(image_height), &image_height, NULL))
+    {
+    case CL_SUCCESS:
+        break;
+    case CL_INVALID_MEM_OBJECT:
+        printf("Error code: -531");
+        return false;
+    case CL_INVALID_VALUE:
+        printf("Error code: -532");
+        return false;
+    case CL_OUT_OF_RESOURCES:
+        printf("Error code: -533");
+        return false;
+    case CL_OUT_OF_HOST_MEMORY:
+        printf("Error code: -534");
+        return false;
+    }
+
+    if (host_ptr == NULL) {
+        printf("Error code: -5005");
+        return false;
+    }
+
+    // Проверяем, что origin и region находятся в пределах изображения
+    if (origin[0] >= image_width || origin[1] >= image_height) {
+        printf("Error code: -51");
+        return false;
+    }
+
+    if (origin[0] + region[0] > image_width || origin[1] + region[1] > image_height) {
+        printf("Error code: -52");
+        return false;
+    }
+
+    // Вычисляем необходимый размер буфера на хосте
+    size_t required_size = region[0] * region[1] * elem_size;
+
+    // Проверяем, что размер host_ptr достаточен для хранения данных
+    if (host_buffer_size < required_size) {
+        printf("Error code: -600");
+        return false;
+    }
+
+    switch (clEnqueueReadImage(command_queue, image, CL_TRUE, origin, region, row_pitch, 0, host_ptr, 0, NULL, NULL))
+    {
+    case CL_SUCCESS:
+        return true;
+    default:
+        printf("Error code: -700");
+        return false;
+    }
+}
 
 /*   Работа с сэмплерами   */
 

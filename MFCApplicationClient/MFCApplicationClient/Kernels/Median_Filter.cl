@@ -11,7 +11,7 @@ __kernel void median_filter(__read_only image2d_t input_image,
 	// Вычисляем границы фильтра
     int half_filter_size = filter_size / 2;
 	// Создаем массив для хранения значений пикселей в окне фильтра
-	#define MAX_FILTER_SIZE 5
+	#define MAX_FILTER_SIZE 7
     float4 pixel_values[MAX_FILTER_SIZE * MAX_FILTER_SIZE];
     int num_pixels = 0;
 	// Перебираем пиксели в окне фильтра

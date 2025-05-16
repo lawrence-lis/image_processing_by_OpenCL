@@ -24,7 +24,7 @@
 	* device - устройство, для которого создаётся очередь команд*/
 extern "C" PROCESSINGLIBRARY_API cl_command_queue cl_runtime_create_command_queue(cl_context context, cl_device_id device);
 
-/*   Работа изображениями   */
+/*   Работа с объектами памяти   */
 
 /* Функция, создающая объект изображения из исходных данных. для внутреннех использования
 	Параметры:
@@ -54,6 +54,28 @@ extern "C" PROCESSINGLIBRARY_API cl_mem cl_runtime_create_image_for_reading(cl_c
 	* rp - количество байт между началом одной строки изображения и началом следующей строки. Если установить rp в 0, OpenCL рассчитает значение автоматически*/
 extern "C" PROCESSINGLIBRARY_API cl_mem cl_runtime_create_image_for_writing(cl_context context, cl_image_format * format, size_t w, size_t h, size_t rp = 0);
 
+/* Функция, которая освобождает объект памяти OpenCL
+	Параметры:
+	* mem_obj - Объект памяти, который нужно освободить*/
+extern "C" PROCESSINGLIBRARY_API void cl_runtime_release_mem_object(cl_mem mem_obj);
+
+/* Функция, которая создает объект буфера OpenCL
+	Параметры:
+	* context - Контекст OpenCL
+	* flags - Флаги для буфера (например, CL_MEM_READ_ONLY, CL_MEM_WRITE_ONLY, CL_MEM_COPY_HOST_PTR).
+	* size - Размер буфера в байтах.
+	* host_ptr - (Необязательный) Указатель на данные, которые нужно скопировать в буфер.*/
+extern "C" PROCESSINGLIBRARY_API cl_mem cl_runtime_create_buffer(cl_context context, cl_mem_flags flags, size_t size, void* host_ptr);
+
+/* Функция, которая безопасно и удобно считывает данные из cl_mem (изображения) обратно на хост (CPU)
+	Параметры:
+	* command_queue - очередь команд, в которую будет поставлена операция чтения изображения
+	* image - объект памяти OpenCL, содержащий изображение, которое нужно прочитать
+	* origin - смещение в изображении, с которого начинается чтение. Он определяет начальную координату (x, y, z) области изображения, которую нужно прочитать
+	* region - размеры области изображения, которую нужно прочитать. Он определяет ширину, высоту и глубину области изображения, которую нужно скопировать.
+	* host_ptr - адрес в памяти хоста (CPU), куда будут скопированы данные изображения. Это должен быть указатель на буфер, который вы выделили на хосте. 
+	Размер этого буфера должен быть достаточным для хранения данных, которые вы читаете из изображения (определяется параметрами origin и region, а также форматом изображения).*/
+extern "C" PROCESSINGLIBRARY_API bool cl_runtime_read_image(cl_command_queue command_queue, cl_mem image, size_t origin[3], size_t region[3], void* host_ptr, size_t host_buffer_size);
 
 /*   Работа с сэмплерами   */
 

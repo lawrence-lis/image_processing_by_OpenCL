@@ -1,6 +1,6 @@
-п»ї//{{NO_DEPENDENCIES}}
-// Р’РєР»СЋС‡Р°РµРјС‹Р№ С„Р°Р№Р», СЃРѕР·РґР°РЅРЅС‹Р№ РІ Microsoft Visual C++.
-// РСЃРїРѕР»СЊР·СѓРµС‚СЃСЏ MFCApplicationClient.rc
+//{{NO_DEPENDENCIES}}
+// Включаемый файл, созданный в Microsoft Visual C++.
+// Используется MFCApplicationClient.rc
 //
 #define IDD_MFCAPPLICATIONCLIENT_DIALOG 102
 #define IDR_MAINFRAME                   128
@@ -27,6 +27,11 @@
 #define IDC_BUTTON_CALCULATING_STATISTIC 1047
 #define IDC_COMBO_STATISTIC_FILTRATION_TYPE 1048
 #define IDC_STATIC_STATISTIC_FILTRATION_TYPE 1049
+#define IDC_COMBO1                      1050
+#define IDC_COMBO_EDGE_FILTER_TYPE      1050
+#define IDC_BUTTON_APPLY_EDGE_FILTER_GPU 1051
+#define IDC_BUTTON_APPLY_EDGE_FILTER_GPU2 1052
+#define IDC_BUTTON_APPLY_EDGE_FILTER_CPU 1052
 
 // Next default values for new objects
 // 
@@ -34,7 +39,7 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        131
 #define _APS_NEXT_COMMAND_VALUE         32771
-#define _APS_NEXT_CONTROL_VALUE         1050
+#define _APS_NEXT_CONTROL_VALUE         1052
 #define _APS_NEXT_SYMED_VALUE           101
 #endif
 #endif

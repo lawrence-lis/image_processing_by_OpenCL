@@ -38,6 +38,8 @@ private:
 
 	BOOL m_pStatisticModeCheckBox;
 
+	int m_nSelectedEdgeFilter;
+
 	cl_platform_id* platforms;							// Массив всех доступных платформ
 	cl_platform_id platformId;							// Идентификатор выбранной пользователем платформы OpenCL
 	cl_device_id* devices;								// Массив всех доступных устройств
@@ -59,7 +61,7 @@ private:
 	///		* is_statistic - флаг сбора статистических данных.
 	///		* stat_array - массив, куда будут записываться результаты подсчётов времени.
 	/// </summary>
-	void DefiningConditions(bool only_cpu, const char* kernel_file_name, const char* kernel_function_name, bool is_statistic, float* stat_array);
+	void DefiningConditions(bool only_cpu, const char* kernel_file_name, const char* kernel_function_name, bool is_statistic, float* stat_array, int edge_mode);
 	void ApplyNoise();
 
 	// Создание
@@ -102,4 +104,7 @@ public:
 	afx_msg void OnEnChangeEditSizeStatisticCountCalculations();
 	afx_msg void OnBnClickedButtonApplyNoise();
 	afx_msg void OnBnClickedButtonCalculatingStatistic();
+	afx_msg void OnSelchangeComboEdgeFilterType();
+	afx_msg void OnBnClickedButtonApplyEdgeFilterGpu();
+	afx_msg void OnBnClickedButtonApplyEdgeFilterCpu();
 };

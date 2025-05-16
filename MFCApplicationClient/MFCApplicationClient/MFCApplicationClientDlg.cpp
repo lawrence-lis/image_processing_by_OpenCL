@@ -51,6 +51,7 @@ CMFCApplicationClientDlg::CMFCApplicationClientDlg(CWnd* pParent /*=nullptr*/)
 	m_nMedianFilterSize(3),
 	m_nStatisticCountCalculations(10),
 	m_pStatisticModeCheckBox(FALSE)
+	, m_nSelectedEdgeFilter(0)
 {
 	m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
 }
@@ -62,6 +63,8 @@ void CMFCApplicationClientDlg::DoDataExchange(CDataExchange* pDX)
 	DDX_Text(pDX, IDC_EDIT_STDDEV_GAUSSIAN_NOISE, m_nStdDevNoise);
 	DDX_Text(pDX, IDC_EDIT_MEDIAN_FILTER_SIZE, m_nMedianFilterSize);
 	DDX_Text(pDX, IDC_EDIT_SIZE_STATISTIC_COUNT_CALCULATIONS, m_nStatisticCountCalculations);
+	DDX_CBIndex(pDX, IDC_COMBO_EDGE_FILTER_TYPE, m_nSelectedEdgeFilter);
+	DDV_MinMaxInt(pDX, m_nSelectedEdgeFilter, 0, INT_MAX);
 }
 
 BEGIN_MESSAGE_MAP(CMFCApplicationClientDlg, CDialogEx)
@@ -82,6 +85,9 @@ BEGIN_MESSAGE_MAP(CMFCApplicationClientDlg, CDialogEx)
 	ON_EN_CHANGE(IDC_EDIT_SIZE_STATISTIC_COUNT_CALCULATIONS, &CMFCApplicationClientDlg::OnEnChangeEditSizeStatisticCountCalculations)
 	ON_BN_CLICKED(IDC_BUTTON_APPLY_NOISE, &CMFCApplicationClientDlg::OnBnClickedButtonApplyNoise)
 	ON_BN_CLICKED(IDC_BUTTON_CALCULATING_STATISTIC, &CMFCApplicationClientDlg::OnBnClickedButtonCalculatingStatistic)
+	ON_CBN_SELCHANGE(IDC_COMBO_EDGE_FILTER_TYPE, &CMFCApplicationClientDlg::OnSelchangeComboEdgeFilterType)
+	ON_BN_CLICKED(IDC_BUTTON_APPLY_EDGE_FILTER_GPU, &CMFCApplicationClientDlg::OnBnClickedButtonApplyEdgeFilterGpu)
+	ON_BN_CLICKED(IDC_BUTTON_APPLY_EDGE_FILTER_CPU, &CMFCApplicationClientDlg::OnBnClickedButtonApplyEdgeFilterCpu)
 END_MESSAGE_MAP()
 
 
@@ -135,6 +141,14 @@ BOOL CMFCApplicationClientDlg::OnInitDialog()
 	m_pStatisticFilteringType.AddString(_T("Медианная фильтрация на CPU"));
 	m_pStatisticFilteringType.AddString(_T("Фильтрация Гауссовым размытием на GPU"));
 	m_pStatisticFilteringType.AddString(_T("Фильтрация Гауссовым размытием на СPU"));
+	m_pStatisticFilteringType.AddString(_T("Выделение границ фильтром фильтром Собеля на GPU"));
+	m_pStatisticFilteringType.AddString(_T("Выделение границ фильтром фильтром Собеля на CPU"));
+	m_pStatisticFilteringType.AddString(_T("Выделение границ фильтром фильтром Лапласа на GPU"));
+	m_pStatisticFilteringType.AddString(_T("Выделение границ фильтром фильтром Лапласа на CPU"));
+	m_pStatisticFilteringType.AddString(_T("Выделение границ фильтром фильтром Превитта на GPU"));
+	m_pStatisticFilteringType.AddString(_T("Выделение границ фильтром фильтром Превитта на CPU"));
+	m_pStatisticFilteringType.AddString(_T("Выделение границ фильтром фильтром Робертса на GPU"));
+	m_pStatisticFilteringType.AddString(_T("Выделение границ фильтром фильтром Робертса на CPU"));
 	m_pStatisticFilteringType.ShowWindow(m_pStatisticModeCheckBox ? SW_SHOW : SW_HIDE);
 	m_pStatisticFilteringType.SetCurSel(0);
 
@@ -155,6 +169,18 @@ BOOL CMFCApplicationClientDlg::OnInitDialog()
 
 	CButton* b5 = (CButton*)GetDlgItem(IDC_BUTTON_CALCULATING_STATISTIC);
 	b5->EnableWindow(m_pStatisticModeCheckBox);
+
+	CComboBox* pCombo = (CComboBox*)GetDlgItem(IDC_COMBO_EDGE_FILTER_TYPE);
+	if (pCombo)
+	{
+		pCombo->AddString(_T("Выделение границ фильтром Собеля"));
+		pCombo->AddString(_T("Выделение границ фильтром Лапласа"));
+		pCombo->AddString(_T("Выделение границ фильтром Превитта"));
+		pCombo->AddString(_T("Выделение границ фильтром Робертса"));
+
+		pCombo->SetCurSel(0);
+		m_nSelectedEdgeFilter = 0;
+	}
 
 	return TRUE;  // возврат значения TRUE, если фокус не передан элементу управления
 }
@@ -216,9 +242,13 @@ void CMFCApplicationClientDlg::OnBnClickedButtonLoadImage()
 		m_originalImageFilePath = filePath;
 
 		// Загружаем изображение в m_pInputImage
-		delete m_pStartImage;	// Освобождение предыдущего изображения
-		if(m_pOutputImage != nullptr) m_pOutputImage = nullptr;;
+		delete m_pStartImage;   // Освобождение предыдущего изображения
+		delete m_pInputImage; // Освобождение предыдущего m_pInputImage
+		delete m_pOutputImage;
+		m_pOutputImage = nullptr;
+
 		m_pStartImage = Bitmap::FromFile(filePath);
+
 		// Проверка на ошибки после создания Bitmap
 		if (m_pStartImage != nullptr && m_pStartImage->GetLastStatus() != Ok) {
 			delete m_pStartImage;	// Освобождение памяти при ошибке
@@ -229,9 +259,27 @@ void CMFCApplicationClientDlg::OnBnClickedButtonLoadImage()
 
 		m_pInputImage = m_pStartImage->Clone(0, 0, m_pStartImage->GetWidth(), m_pStartImage->GetHeight(), m_pStartImage->GetPixelFormat());
 
+		// Блокируем биты изображения для доступа
+		BitmapData inputData;
+		Rect rect(0, 0, m_pInputImage->GetWidth(), m_pInputImage->GetHeight());
+
+		if (m_pInputImage->LockBits(&rect, ImageLockModeRead | ImageLockModeWrite, m_pInputImage->GetPixelFormat(), &inputData) != Ok) {
+			MessageBox(L"Error locking image bits.", L"Error", MB_ICONERROR);
+			delete m_pStartImage;
+			m_pStartImage = nullptr;
+			delete m_pInputImage;
+			m_pInputImage = nullptr;
+			return;
+		}
+
+		m_pInputImage->UnlockBits(&inputData);
+
+		// Теперь m_pInputImage заблокирован и доступен для обработки.
 		DisplayImageInPictureControl(m_pInputImage, IDC_INPUT_IMAGE);
+
+		// Важно разблокировать биты изображения после обработки!
 	}
-	toRewrite = true;
+	toRewrite = false;
 }
 
 
@@ -280,7 +328,7 @@ void CMFCApplicationClientDlg::DisplayImageInPictureControl(Bitmap* image, int p
 
 void CMFCApplicationClientDlg::OnBnClickedButtonMedianFiltering()
 {
-	DefiningConditions(false, "Kernels/Median_Filter.cl", "median_filter", false, nullptr);
+	DefiningConditions(false, "Kernels/Median_Filter.cl", "median_filter", false, nullptr, m_nSelectedEdgeFilter);
 }
 
 
@@ -293,10 +341,14 @@ void CMFCApplicationClientDlg::OnEnChangeEditMeadianFilterSize()
 		MessageBox(L"Размер фильтра должен быть не меньше 1.", L"Ошибка", MB_ICONERROR);
 		UpdateData(FALSE); // Обновляем Edit Control из m_nFilterSize
 	}
-	else if (m_nMedianFilterSize > 5) {
-		m_nMedianFilterSize = 5;
-		MessageBox(L"Размер фильтра не должен превышать 5.", L"Ошибка", MB_ICONERROR);
-		UpdateData(FALSE); // Обновляем Edit Control из m_nFilterSize
+	else if (m_nMedianFilterSize > 7) {
+		m_nMedianFilterSize = 7;
+		MessageBox(L"Размер фильтра не должен превышать 7.", L"Ошибка", MB_ICONERROR);
+		UpdateData(FALSE);
+	}
+	else if (m_nMedianFilterSize % 2 == 0) {
+		m_nMedianFilterSize--;
+		UpdateData(FALSE);
 	}
 }
 
@@ -367,18 +419,18 @@ void CMFCApplicationClientDlg::OnEnChangeEditStddevGaussianNoise()
 
 void CMFCApplicationClientDlg::OnBnClickedButtonGaussianBlurFilter()
 {
-	DefiningConditions(false, "Kernels/Kernel_Gaussian_Filter.cl", "gaussian_filter", false, nullptr);
+	DefiningConditions(false, "Kernels/Kernel_Gaussian_Filter.cl", "gaussian_filter", false, nullptr, m_nSelectedEdgeFilter);
 }
 
 
 void CMFCApplicationClientDlg::OnBnClickedButtonMedianFilteringCpu()
 {
-	DefiningConditions(true, "Median Filtering on CPU", nullptr, false, nullptr);
+	DefiningConditions(true, "Median Filtering on CPU", nullptr, false, nullptr, m_nSelectedEdgeFilter);
 }
 
 void CMFCApplicationClientDlg::OnBnClickedButtonGaussianBlurFilterCpu()
 {
-	DefiningConditions(true, "Gaussian Filtering on CPU", nullptr, false, nullptr);
+	DefiningConditions(true, "Gaussian Filtering on CPU", nullptr, false, nullptr, m_nSelectedEdgeFilter);
 }
 
 void CMFCApplicationClientDlg::OnBnClickedCheckStatisticMode()
@@ -406,6 +458,15 @@ void CMFCApplicationClientDlg::OnBnClickedCheckStatisticMode()
 	CButton* b5 = (CButton*)GetDlgItem(IDC_BUTTON_CALCULATING_STATISTIC);
 	b5->EnableWindow(m_pStatisticModeCheckBox);
 
+	CButton* b6 = (CButton*)GetDlgItem(IDC_BUTTON_APPLY_EDGE_FILTER_GPU);
+	b6->EnableWindow(!m_pStatisticModeCheckBox);
+
+	CButton* b7 = (CButton*)GetDlgItem(IDC_BUTTON_APPLY_EDGE_FILTER_CPU);
+	b7->EnableWindow(!m_pStatisticModeCheckBox);
+
+	CComboBox* cb1 = (CComboBox*)GetDlgItem(IDC_COMBO_EDGE_FILTER_TYPE);
+	cb1->EnableWindow(!m_pStatisticModeCheckBox);
+
 	m_pStatisticFilteringType.ShowWindow(m_pStatisticModeCheckBox ? SW_SHOW : SW_HIDE);
 	strStatisticCountCalculations.ShowWindow(m_pStatisticModeCheckBox ? SW_SHOW : SW_HIDE);
 }
@@ -421,7 +482,7 @@ void CMFCApplicationClientDlg::OnEnChangeEditSizeStatisticCountCalculations()
 	}
 }
 
-void CMFCApplicationClientDlg::DefiningConditions(bool only_cpu, const char* kernel_file_name, const char* kernel_function_name, bool is_statistic, float* stat_array)
+void CMFCApplicationClientDlg::DefiningConditions(bool only_cpu, const char* kernel_file_name, const char* kernel_function_name, bool is_statistic, float* stat_array, int edge_mode)
 {
 	//	1. Проверка начальных условий.
 	//		1.1. Загружено ли обрабатываемое изображение?
@@ -518,7 +579,9 @@ void CMFCApplicationClientDlg::DefiningConditions(bool only_cpu, const char* ker
 	if (kernel_file_name == "Kernels/Median_Filter.cl") success = medianFilter(inputPixels, outputPixels, width, height, count_channels, m_nMedianFilterSize, commandQueue, kernel, context, sampler, &duration);
 	else if (kernel_file_name == "Kernels/Kernel_Gaussian_Filter.cl") success = gaussianBlurFilter(inputPixels, outputPixels, width, height, count_channels, commandQueue, kernel, context, sampler, &duration);
 	else if (kernel_file_name == "Median Filtering on CPU") success = CPU_Filtering::medianFilterCPU(inputPixels, outputPixels, width, height, count_channels, m_nMedianFilterSize, &duration);
-	else if (kernel_file_name == "Gaussian Filtering on CPU")success = CPU_Filtering::gaussianBlurFilterCPU(inputPixels, outputPixels, width, height, count_channels, &duration);
+	else if (kernel_file_name == "Gaussian Filtering on CPU") success = CPU_Filtering::gaussianBlurFilterCPU(inputPixels, outputPixels, width, height, count_channels, &duration);
+	else if ((kernel_file_name == "Kernels/Sobel_Filter.cl") || (kernel_file_name == "Kernels/Laplace_Filter.cl") || (kernel_file_name == "Kernels/Prewitt_Filter.cl") || (kernel_file_name == "Kernels/Roberts_Filter.cl")) success = detectEdges(inputPixels, outputPixels, m_nSelectedEdgeFilter, width, height, count_channels, commandQueue, kernel, context, sampler, &duration);
+	else if (kernel_file_name == "Edge filtering on CPU") success = CPU_Filtering::ApplyEdgeDetectionCPU(inputPixels, outputPixels, edge_mode, width, height, count_channels, &duration);
 	else {
 		//		3.1.1. Осучществляем очистку выделенных ресурсов в случае ошибки, сообщаем об ошибке пользователю и завершаем работу приложения.
 		delete filteredBitmap;
@@ -569,22 +632,57 @@ void CMFCApplicationClientDlg::OnBnClickedButtonCalculatingStatistic()
 	CProgressCtrl* pProgress = (CProgressCtrl*)GetDlgItem(IDC_PROGRESS_STATISTIC);
 	for (int i = 0; i < m_nStatisticCountCalculations; i++)
 	{
-		ApplyNoise();
 		if (selectedText == _T("Медианная фильтрация на GPU"))
 		{
-			DefiningConditions(false, "Kernels/Median_Filter.cl", "median_filter", true, &stats[i]);
+			ApplyNoise();
+			DefiningConditions(false, "Kernels/Median_Filter.cl", "median_filter", true, &stats[i], m_nSelectedEdgeFilter);
 		}
-		if (selectedText == _T("Медианная фильтрация на CPU"))
+		else if (selectedText == _T("Медианная фильтрация на CPU"))
 		{
-			DefiningConditions(true, "Median Filtering on CPU", nullptr, true, &stats[i]);
+			ApplyNoise();
+			DefiningConditions(true, "Median Filtering on CPU", nullptr, true, &stats[i], m_nSelectedEdgeFilter);
 		}
-		if (selectedText == _T("Фильтрация Гауссовым размытием на GPU"))
+		else if (selectedText == _T("Фильтрация Гауссовым размытием на GPU"))
 		{
-			DefiningConditions(false, "Kernels/Kernel_Gaussian_Filter.cl", "gaussian_filter", true, &stats[i]);
+			ApplyNoise();
+			DefiningConditions(false, "Kernels/Kernel_Gaussian_Filter.cl", "gaussian_filter", true, &stats[i], m_nSelectedEdgeFilter);
 		}
-		if (selectedText == _T("Фильтрация Гауссовым размытием на СPU"))
+		else if (selectedText == _T("Фильтрация Гауссовым размытием на СPU"))
 		{
-			DefiningConditions(true, "Gaussian Filtering on CPU", nullptr, true, &stats[i]);
+			ApplyNoise();
+			DefiningConditions(true, "Gaussian Filtering on CPU", nullptr, true, &stats[i], m_nSelectedEdgeFilter);
+		}
+		else if (selectedText == _T("Выделение границ фильтром фильтром Собеля на GPU"))
+		{
+			DefiningConditions(false, "Kernels/Sobel_Filter.cl", "SobelKernel", true, &stats[i], m_nSelectedEdgeFilter);
+		}
+		else if (selectedText == _T("Выделение границ фильтром фильтром Собеля на CPU"))
+		{
+			DefiningConditions(true, "Edge filtering on CPU", nullptr, false, &stats[i], 0);
+		}
+		else if (selectedText == _T("Выделение границ фильтром фильтром Лапласа на GPU"))
+		{
+			DefiningConditions(false, "Kernels/Laplace_Filter.cl", "LaplaceKernel", true, &stats[i], m_nSelectedEdgeFilter);
+		}
+		else if (selectedText == _T("Выделение границ фильтром фильтром Лапласа на CPU"))
+		{
+			DefiningConditions(true, "Edge filtering on CPU", nullptr, false, &stats[i], 1);
+		}
+		else if (selectedText == _T("Выделение границ фильтром фильтром Превитта на GPU"))
+		{
+			DefiningConditions(false, "Kernels/Prewitt_Filter.cl", "PrewittKernel", true, &stats[i], m_nSelectedEdgeFilter);
+		}
+		else if (selectedText == _T("Выделение границ фильтром фильтром Превитта на CPU"))
+		{
+			DefiningConditions(true, "Edge filtering on CPU", nullptr, false, &stats[i], 2);
+		}
+		else if (selectedText == _T("Выделение границ фильтром фильтром Робертса на GPU"))
+		{
+			DefiningConditions(false, "Kernels/Roberts_Filter.cl", "RobertsKernel", true, &stats[i], m_nSelectedEdgeFilter);
+		}
+		else if (selectedText == _T("Выделение границ фильтром фильтром Робертса на CPU"))
+		{
+			DefiningConditions(true, "Edge filtering on CPU", nullptr, false, &stats[i], 3);
 		}
 		pProgress->SetPos((i + 1) * (m_nStatisticCountCalculations));
 	}
@@ -733,4 +831,41 @@ void CMFCApplicationClientDlg::ApplyNoise()
 
 	toRewrite = true;
 	DisplayImageInPictureControl(m_pOutputImage, IDC_OUTPUT_IMAGE);
+}
+
+void CMFCApplicationClientDlg::OnSelchangeComboEdgeFilterType()
+{
+	// Получаем указатель на Combo Box
+	CComboBox* pCombo = (CComboBox*)GetDlgItem(IDC_COMBO_EDGE_FILTER_TYPE);
+	if (pCombo)
+	{
+		// Получаем индекс выбранного элемента
+		m_nSelectedEdgeFilter = pCombo->GetCurSel();
+	}
+}
+
+
+void CMFCApplicationClientDlg::OnBnClickedButtonApplyEdgeFilterGpu()
+{
+	switch (m_nSelectedEdgeFilter)
+	{
+	case 0:
+		DefiningConditions(false, "Kernels/Sobel_Filter.cl", "SobelKernel", false, nullptr, 0);
+		break;
+	case 1:
+		DefiningConditions(false, "Kernels/Laplace_Filter.cl", "LaplaceKernel", false, nullptr, 1);
+		break;
+	case 2:
+		DefiningConditions(false, "Kernels/Prewitt_Filter.cl", "PrewittKernel", false, nullptr, 2);
+		break;
+	case 3:
+		DefiningConditions(false, "Kernels/Roberts_Filter.cl", "RobertsKernel", false, nullptr, 3);
+		break;
+	}
+}
+
+
+void CMFCApplicationClientDlg::OnBnClickedButtonApplyEdgeFilterCpu()
+{
+	DefiningConditions(true, "Edge filtering on CPU", nullptr, false, nullptr, m_nSelectedEdgeFilter);
 }

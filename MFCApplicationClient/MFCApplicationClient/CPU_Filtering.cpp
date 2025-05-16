@@ -105,3 +105,220 @@ bool CPU_Filtering::gaussianBlurFilterCPU(BYTE* inputPixels, BYTE* outputPixels,
 
 	return true;
 }
+
+bool CPU_Filtering::ApplyEdgeDetectionCPU(BYTE* inputPixels, BYTE* outputPixels, int selectedEdgeFilter, int imageWidth, int imageHeight, int imageChannels, unsigned long long* duration)
+{
+    if (inputPixels == nullptr || outputPixels == nullptr) return false;
+    if (imageWidth <= 0 || imageHeight <= 0 || imageChannels <= 0) return false;
+
+    switch (selectedEdgeFilter) {
+    case 0: // Оператор Собеля
+        ApplySobel(inputPixels, outputPixels, imageWidth, imageHeight, imageChannels, duration);
+        break;
+    case 1:
+        ApplyLaplacian(inputPixels, outputPixels, imageWidth, imageHeight, imageChannels, duration);
+        break;
+    case 2:
+        ApplyPrewitt(inputPixels, outputPixels, imageWidth, imageHeight, imageChannels, duration);
+        break;
+    case 3:
+        ApplyRoberts(inputPixels, outputPixels, imageWidth, imageHeight, imageChannels, duration);
+        break;
+    }
+    return true;
+}
+
+
+
+void CPU_Filtering::ApplySobel(BYTE* inputPixels, BYTE* outputPixels, int imageWidth, int imageHeight, int imageChannels, unsigned long long* duration)
+{
+    int sobelGx[3][3] = {
+        {-1, 0, 1},
+        {-2, 0, 2},
+        {-1, 0, 1}
+    };
+
+    int sobelGy[3][3] = {
+        {-1, -2, -1},
+        { 0,  0,  0},
+        { 1,  2,  1}
+    };
+
+    auto start = std::chrono::high_resolution_clock::now();
+
+    for (int y = 0; y < imageHeight; y++) {
+        for (int x = 0; x < imageWidth; x++) {
+            for (int c = 0; c < 3; c++) {
+                int Gx = 0;
+                int Gy = 0;
+
+                for (int i = -1; i <= 1; i++) {
+                    for (int j = -1; j <= 1; j++) {
+                        int clampedY = Clamp(y + i, 0, imageHeight - 1);
+                        int clampedX = Clamp(x + j, 0, imageWidth - 1);
+
+                        Gx += sobelGx[i + 1][j + 1] * inputPixels[(clampedY * imageWidth + clampedX) * imageChannels + c];
+                        Gy += sobelGy[i + 1][j + 1] * inputPixels[(clampedY * imageWidth + clampedX) * imageChannels + c];
+                    }
+                }
+
+                int magnitude = static_cast<int>(sqrt(Gx * Gx + Gy * Gy));
+
+                outputPixels[(y * imageWidth + x) * imageChannels + c] = ClampPixel(magnitude);
+            }
+            outputPixels[(y * imageWidth + x) * imageChannels + 3] = inputPixels[(y * imageWidth + x) * imageChannels + 3];
+        }
+    }
+
+    auto end = std::chrono::high_resolution_clock::now();
+    auto duration_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
+
+    if (duration != nullptr) {
+        *duration = duration_ns;
+    }
+}
+
+void CPU_Filtering::ApplyLaplacian(BYTE* inputPixels, BYTE* outputPixels, int imageWidth, int imageHeight, int imageChannels, unsigned long long* duration)
+{
+    int laplacianKernel[3][3] = {
+        {0,  1, 0},
+        {1, -4, 1},
+        {0,  1, 0}
+    };
+
+    auto start = std::chrono::high_resolution_clock::now();
+
+    for (int y = 0; y < imageHeight; y++) {
+        for (int x = 0; x < imageWidth; x++) {
+            for (int c = 0; c < 3; c++) {
+                int laplacian = 0;
+
+                for (int i = -1; i <= 1; i++) {
+                    for (int j = -1; j <= 1; j++) {
+                        int clampedY = Clamp(y + i, 0, imageHeight - 1);
+                        int clampedX = Clamp(x + j, 0, imageWidth - 1);
+
+                        laplacian += laplacianKernel[i + 1][j + 1] * inputPixels[(clampedY * imageWidth + clampedX) * imageChannels + c];
+                    }
+                }
+
+                outputPixels[(y * imageWidth + x) * imageChannels + c] = ClampPixel(laplacian);
+            }
+            outputPixels[(y * imageWidth + x) * imageChannels + 3] = inputPixels[(y * imageWidth + x) * imageChannels + 3];
+        }
+    }
+
+    auto end = std::chrono::high_resolution_clock::now();
+    auto duration_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
+
+    if (duration != nullptr) {
+        *duration = duration_ns;
+    }
+}
+
+void CPU_Filtering::ApplyPrewitt(BYTE* inputPixels, BYTE* outputPixels, int imageWidth, int imageHeight, int imageChannels, unsigned long long* duration)
+{
+    int prewittGx[3][3] = {
+        {-1, 0, 1},
+        {-1, 0, 1},
+        {-1, 0, 1}
+    };
+    
+    int prewittGy[3][3] = {
+        {-1, -1, -1},
+        {0,  0,  0},
+        {1,  1,  1}
+    };
+
+    auto start = std::chrono::high_resolution_clock::now();
+
+    for (int y = 0; y < imageHeight; y++) {
+        for (int x = 0; x < imageWidth; x++) {
+            for (int c = 0; c < 3; c++) {
+                int Gx = 0;
+                int Gy = 0;
+
+                for (int i = -1; i <= 1; i++) {
+                    for (int j = -1; j <= 1; j++) {
+                        int clampedY = Clamp(y + i, 0, imageHeight - 1);
+                        int clampedX = Clamp(x + j, 0, imageWidth - 1);
+
+                        Gx += prewittGx[i + 1][j + 1] * inputPixels[(clampedY * imageWidth + clampedX) * imageChannels + c];
+                        Gy += prewittGy[i + 1][j + 1] * inputPixels[(clampedY * imageWidth + clampedX) * imageChannels + c];
+                    }
+                }
+
+                int magnitude = static_cast<int>(sqrt(Gx * Gx + Gy * Gy));
+
+                outputPixels[(y * imageWidth + x) * imageChannels + c] = ClampPixel(magnitude);
+            }
+            outputPixels[(y * imageWidth + x) * imageChannels + 3] = inputPixels[(y * imageWidth + x) * imageChannels + 3];
+        }
+    }
+
+    auto end = std::chrono::high_resolution_clock::now();
+    auto duration_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
+
+    if (duration != nullptr) {
+        *duration = duration_ns;
+    }
+}
+
+void CPU_Filtering::ApplyRoberts(BYTE* inputPixels, BYTE* outputPixels, int imageWidth, int imageHeight, int imageChannels, unsigned long long* duration)
+{
+    int robertsGx[2][2] = {
+        {1, 0},
+        {0, -1}
+    };
+
+    int robertsGy[2][2] = {
+        {0, 1},
+        {-1, 0}
+    };
+
+    auto start = std::chrono::high_resolution_clock::now();
+
+    for (int y = 0; y < imageHeight; y++) {
+        for (int x = 0; x < imageWidth; x++) {
+            for (int c = 0; c < 3; c++) {
+                int Gx = 0;
+                int Gy = 0;
+
+                for (int i = 0; i < 2; i++) {
+                    for (int j = 0; j < 2; j++) {
+                        int clampedY = Clamp(y + i, 0, imageHeight - 1);
+                        int clampedX = Clamp(x + j, 0, imageWidth - 1);
+
+                        Gx += robertsGx[i][j] * inputPixels[(clampedY * imageWidth + clampedX) * imageChannels + c];
+                        Gy += robertsGy[i][j] * inputPixels[(clampedY * imageWidth + clampedX) * imageChannels + c];
+                    }
+                }
+
+                int magnitude = static_cast<int>(sqrt(Gx * Gx + Gy * Gy));
+
+                outputPixels[(y * imageWidth + x) * imageChannels + c] = ClampPixel(magnitude);
+            }
+            outputPixels[(y * imageWidth + x) * imageChannels + 3] = inputPixels[(y * imageWidth + x) * imageChannels + 3];
+        }
+    }
+
+    auto end = std::chrono::high_resolution_clock::now();
+    auto duration_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
+
+    if (duration != nullptr) {
+        *duration = duration_ns;
+    }
+}
+
+BYTE CPU_Filtering::ClampPixel(int value)
+{
+    if (value < 0) return 0;
+    if (value > 255) return 255;
+    return static_cast<BYTE>(value);
+}
+
+int CPU_Filtering::Clamp(int value, int min, int max) {
+    if (value < min) return min;
+    if (value > max) return max;
+    return value;
+}
